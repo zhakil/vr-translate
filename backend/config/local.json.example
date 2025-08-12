@@ -1,0 +1,111 @@
+{
+  "server": {
+    "port": 8080,
+    "websocketPort": 8081,
+    "host": "localhost",
+    "cors": {
+      "enabled": true,
+      "origins": ["http://localhost:3000", "http://localhost:8080"]
+    }
+  },
+  
+  "logging": {
+    "level": "debug",
+    "serviceName": "vr-translate-backend",
+    "file": {
+      "enabled": true,
+      "filename": "./logs/app.log",
+      "maxSize": "20m",
+      "maxFiles": 5
+    },
+    "console": {
+      "enabled": true,
+      "colorize": true
+    }
+  },
+  
+  "ocr": {
+    "engine": "google_vision",
+    "timeout": 10000,
+    "confidenceThreshold": 0.7,
+    "providers": {
+      "google_vision": {
+        "enabled": true,
+        "apiKey": "your_google_vision_api_key",
+        "credentialsPath": "./config/google-service-account.json"
+      },
+      "tesseract": {
+        "enabled": false,
+        "language": "eng+chi_sim"
+      },
+      "azure_cv": {
+        "enabled": false,
+        "endpoint": "your_azure_endpoint",
+        "apiKey": "your_azure_key"
+      }
+    }
+  },
+  
+  "translation": {
+    "engine": "google_translate",
+    "timeout": 5000,
+    "confidenceThreshold": 0.8,
+    "providers": {
+      "google_translate": {
+        "enabled": true,
+        "apiKey": "your_google_translate_api_key"
+      },
+      "deepl": {
+        "enabled": false,
+        "apiKey": "your_deepl_api_key",
+        "endpoint": "https://api-free.deepl.com"
+      },
+      "azure_translator": {
+        "enabled": false,
+        "endpoint": "your_azure_translator_endpoint",
+        "apiKey": "your_azure_translator_key"
+      }
+    }
+  },
+  
+  "websocket": {
+    "heartbeatInterval": 30000,
+    "messageTimeout": 10000,
+    "maxMessageSize": 1048576,
+    "compression": true,
+    "maxConnections": 100
+  },
+  
+  "cache": {
+    "enabled": true,
+    "ttl": 3600,
+    "maxSize": 1000,
+    "cleanupInterval": 300
+  },
+  
+  "security": {
+    "rateLimiting": {
+      "enabled": true,
+      "windowMs": 60000,
+      "maxRequests": 100
+    },
+    "cors": {
+      "enabled": true,
+      "credentials": true
+    }
+  },
+  
+  "performance": {
+    "maxConcurrentRequests": 50,
+    "requestTimeout": 30000,
+    "memoryWarningThreshold": 0.8,
+    "cpuWarningThreshold": 0.7
+  },
+  
+  "development": {
+    "debugMode": true,
+    "mockServices": false,
+    "enableApiDocs": true,
+    "hotReload": true
+  }
+}

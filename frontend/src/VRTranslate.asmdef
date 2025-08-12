@@ -1,0 +1,21 @@
+{
+    "name": "VRTranslate",
+    "rootNamespace": "VRTranslate",
+    "references": [
+        "Unity.XR.Interaction.Toolkit",
+        "Unity.XR.OpenXR",
+        "Unity.XR.Management",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "Unity.Netcode.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

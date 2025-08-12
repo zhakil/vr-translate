@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR翻译服务 - Web应用集成示例</title>
+    <link rel="icon" href="data:,">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        
+        .section h3 {
+            color: #0066cc;
+            margin-top: 0;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        textarea {
+            height: 120px;
+            resize: vertical;
+        }
+        
+        button {
+            background: #0066cc;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .result-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+            margin-top: 15px;
+            min-height: 50px;
+            white-space: pre-wrap;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .file-upload {
+            border: 2px dashed #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        
+        .file-upload:hover {
+            border-color: #0066cc;
+        }
+        
+        .file-upload.drag-over {
+            border-color: #0066cc;
+            background: #f0f8ff;
+        }
+        
+        .ws-messages {
+            height: 200px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0066cc;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .loading {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 VR翻译服务 - Web应用集成示例</h1>
+        
+        <!-- 状态显示 -->
+        <div id="statusDisplay" class="status info">
+            🔄 正在初始化SDK...
+        </div>
+        
+        <!-- 文本翻译 -->
+        <div class="section">
+            <h3>📝 文本翻译</h3>
+            <div class="form-group">
+                <label for="translateText">要翻译的文本:</label>
+                <textarea id="translateText" placeholder="请输入要翻译的文本...">Hello World! Welcome to VR Translation Service.</textarea>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label for="sourceLang">源语言:</label>
+                    <select id="sourceLang">
+                        <option value="auto">自动检测</option>
+                        <option value="en" selected>英语</option>
+                        <option value="zh-CN">中文</option>
+                        <option value="ja">日语</option>
+                        <option value="ko">韩语</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="targetLang">目标语言:</label>
+                    <select id="targetLang">
+                        <option value="zh-CN" selected>中文（简体）</option>
+                        <option value="en">英语</option>
+                        <option value="ja">日语</option>
+                        <option value="ko">韩语</option>
+                    </select>
+                </div>
+            </div>
+            <button id="translateBtn">🔄 翻译</button>
+            <button id="batchTranslateBtn">📦 批量翻译（按行分割）</button>
+            <div id="translateResult" class="result-box"></div>
+        </div>
+        
+        <!-- OCR识别 -->
+        <div class="section">
+            <h3>📷 OCR图片识别</h3>
+            <div class="file-upload" id="imageUpload">
+                <p>📁 点击或拖拽图片文件到这里</p>
+                <p style="font-size: 12px; color: #666;">支持 PNG, JPG, GIF 格式，最大 10MB</p>
+                <input type="file" id="imageInput" accept="image/*" style="display: none;">
+            </div>
+            <div style="margin-top: 15px;">
+                <button id="ocrBtn" disabled>🔍 识别文字</button>
+                <button id="ocrTranslateBtn" disabled>🔍➡️📝 识别并翻译</button>
+            </div>
+            <div id="ocrResult" class="result-box"></div>
+        </div>
+        
+        <!-- WebSocket实时通信 -->
+        <div class="section">
+            <h3>⚡ WebSocket实时通信</h3>
+            <button id="wsConnectBtn">🔌 连接WebSocket</button>
+            <button id="wsDisconnectBtn" disabled>🔌 断开连接</button>
+            <button id="sendGazeBtn" disabled>👁️ 发送眼动数据</button>
+            <button id="sendConfigBtn" disabled>⚙️ 发送配置</button>
+            
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="wsMessages">消息日志:</label>
+                <div id="wsMessages" class="ws-messages"></div>
+            </div>
+        </div>
+        
+        <!-- 服务统计 -->
+        <div class="section">
+            <h3>📊 服务统计</h3>
+            <button id="refreshStatsBtn">🔄 刷新统计</button>
+            <div id="statsDisplay" class="stats-grid"></div>
+        </div>
+    </div>
+
+    <!-- 引入SDK -->
+    <script src="../../../sdk/javascript/vr-translate-sdk.js"></script>
+    
+    <script>
+        // 初始化SDK
+        const sdk = new VRTranslateSDK({
+            baseURL: 'http://localhost:8080',
+            websocketURL: 'ws://localhost:8081',
+            debug: true
+        });
+        
+        // DOM元素引用
+        const statusDisplay = document.getElementById('statusDisplay');
+        const translateText = document.getElementById('translateText');
+        const sourceLang = document.getElementById('sourceLang');
+        const targetLang = document.getElementById('targetLang');
+        const translateBtn = document.getElementById('translateBtn');
+        const batchTranslateBtn = document.getElementById('batchTranslateBtn');
+        const translateResult = document.getElementById('translateResult');
+        
+        const imageUpload = document.getElementById('imageUpload');
+        const imageInput = document.getElementById('imageInput');
+        const ocrBtn = document.getElementById('ocrBtn');
+        const ocrTranslateBtn = document.getElementById('ocrTranslateBtn');
+        const ocrResult = document.getElementById('ocrResult');
+        
+        const wsConnectBtn = document.getElementById('wsConnectBtn');
+        const wsDisconnectBtn = document.getElementById('wsDisconnectBtn');
+        const sendGazeBtn = document.getElementById('sendGazeBtn');
+        const sendConfigBtn = document.getElementById('sendConfigBtn');
+        const wsMessages = document.getElementById('wsMessages');
+        
+        const refreshStatsBtn = document.getElementById('refreshStatsBtn');
+        const statsDisplay = document.getElementById('statsDisplay');
+        
+        let selectedImage = null;
+        
+        // 显示状态
+        function showStatus(message, type = 'info') {
+            statusDisplay.className = `status ${type}`;
+            statusDisplay.textContent = message;
+        }
+        
+        // 显示加载状态
+        function setLoading(button, loading = true) {
+            if (loading) {
+                button.disabled = true;
+                button.innerHTML = '⏳ ' + button.textContent.replace(/^[⏳🔄]\s*/, '');
+            } else {
+                button.disabled = false;
+                button.innerHTML = button.innerHTML.replace(/^⏳\s*/, '');
+            }
+        }
+        
+        // 添加WebSocket消息到日志
+        function addWSMessage(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'send' ? '📤' : type === 'receive' ? '📥' : 'ℹ️';
+            wsMessages.innerHTML += `[${timestamp}] ${prefix} ${message}\\n`;
+            wsMessages.scrollTop = wsMessages.scrollHeight;
+        }
+        
+        // 初始化应用
+        async function initializeApp() {
+            try {
+                showStatus('✅ SDK初始化成功，服务可用', 'success');
+                
+                // 加载语言列表
+                const languages = await sdk.getLanguages();
+                updateLanguageOptions(languages);
+                
+                // 加载初始统计数据
+                await refreshStats();
+                
+            } catch (error) {
+                console.error('初始化失败:', error);
+                showStatus('❌ 服务不可用，请检查服务器是否运行', 'error');
+            }
+        }
+        
+        // 更新语言选项
+        function updateLanguageOptions(languages) {
+            const sourceOptions = sourceLang;
+            const targetOptions = targetLang;
+            
+            // 清空现有选项
+            sourceOptions.innerHTML = '<option value="auto">自动检测</option>';
+            targetOptions.innerHTML = '';
+            
+            // 添加常用语言
+            languages.common.forEach(lang => {
+                if (lang.code !== 'auto') {
+                    sourceOptions.innerHTML += `<option value="${lang.code}">${lang.name}</option>`;
+                }
+                targetOptions.innerHTML += `<option value="${lang.code}">${lang.name}</option>`;
+            });
+        }
+        
+        // 文本翻译
+        translateBtn.addEventListener('click', async () => {
+            const text = translateText.value.trim();
+            if (!text) {
+                showStatus('❌ 请输入要翻译的文本', 'error');
+                return;
+            }
+            
+            setLoading(translateBtn);
+            try {
+                const result = await sdk.translate(text, sourceLang.value, targetLang.value);
+                translateResult.textContent = `原文: ${result.original}\\n\\n译文: ${result.translation}\\n\\n语言: ${result.sourceLang} → ${result.targetLang}\\n时间: ${new Date(result.timestamp).toLocaleString()}`;
+                showStatus('✅ 翻译完成', 'success');
+            } catch (error) {
+                console.error('翻译失败:', error);
+                translateResult.textContent = `错误: ${error.message}`;
+                showStatus('❌ 翻译失败', 'error');
+            } finally {
+                setLoading(translateBtn, false);
+            }
+        });
+        
+        // 批量翻译
+        batchTranslateBtn.addEventListener('click', async () => {
+            const text = translateText.value.trim();
+            if (!text) {
+                showStatus('❌ 请输入要翻译的文本', 'error');
+                return;
+            }
+            
+            const texts = text.split('\\n').filter(line => line.trim());
+            if (texts.length === 0) {
+                showStatus('❌ 没有有效的文本行', 'error');
+                return;
+            }
+            
+            setLoading(batchTranslateBtn);
+            try {
+                const result = await sdk.batchTranslate(texts, sourceLang.value, targetLang.value);
+                
+                let resultText = `批量翻译结果 (${result.successful}/${result.total} 成功):\\n\\n`;
+                result.results.forEach(item => {
+                    if (item.success) {
+                        resultText += `${item.index + 1}. ${item.original} → ${item.translation}\\n`;
+                    } else {
+                        resultText += `${item.index + 1}. ${item.original} → [错误: ${item.error}]\\n`;
+                    }
+                });
+                
+                translateResult.textContent = resultText;
+                showStatus('✅ 批量翻译完成', 'success');
+            } catch (error) {
+                console.error('批量翻译失败:', error);
+                translateResult.textContent = `错误: ${error.message}`;
+                showStatus('❌ 批量翻译失败', 'error');
+            } finally {
+                setLoading(batchTranslateBtn, false);
+            }
+        });
+        
+        // 图片上传处理
+        imageUpload.addEventListener('click', () => imageInput.click());
+        imageUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            imageUpload.classList.add('drag-over');
+        });
+        imageUpload.addEventListener('dragleave', () => {
+            imageUpload.classList.remove('drag-over');
+        });
+        imageUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            imageUpload.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleImageFile(files[0]);
+            }
+        });
+        
+        imageInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleImageFile(e.target.files[0]);
+            }
+        });
+        
+        function handleImageFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showStatus('❌ 请选择图片文件', 'error');
+                return;
+            }
+            
+            if (file.size > 10 * 1024 * 1024) {
+                showStatus('❌ 图片文件过大，请选择小于10MB的文件', 'error');
+                return;
+            }
+            
+            selectedImage = file;
+            imageUpload.innerHTML = `<p>✅ 已选择图片: ${file.name}</p><p style="font-size: 12px; color: #666;">大小: ${(file.size / 1024).toFixed(1)} KB</p>`;
+            ocrBtn.disabled = false;
+            ocrTranslateBtn.disabled = false;
+            showStatus('✅ 图片已选择，可以进行OCR识别', 'success');
+        }
+        
+        // OCR识别
+        ocrBtn.addEventListener('click', async () => {
+            if (!selectedImage) return;
+            
+            setLoading(ocrBtn);
+            try {
+                const result = await sdk.ocr(selectedImage);
+                ocrResult.textContent = `识别结果: ${result.text}\\n\\n语言: ${result.language}\\n时间: ${new Date(result.timestamp).toLocaleString()}`;
+                showStatus('✅ OCR识别完成', 'success');
+            } catch (error) {
+                console.error('OCR识别失败:', error);
+                ocrResult.textContent = `错误: ${error.message}`;
+                showStatus('❌ OCR识别失败', 'error');
+            } finally {
+                setLoading(ocrBtn, false);
+            }
+        });
+        
+        // OCR识别并翻译
+        ocrTranslateBtn.addEventListener('click', async () => {
+            if (!selectedImage) return;
+            
+            setLoading(ocrTranslateBtn);
+            try {
+                const result = await sdk.ocrTranslate(selectedImage, 'auto', targetLang.value);
+                ocrResult.textContent = `原文: ${result.original}\\n\\n译文: ${result.translation}\\n\\n语言: ${result.sourceLang} → ${result.targetLang}\\n时间: ${new Date(result.timestamp).toLocaleString()}`;
+                showStatus('✅ OCR识别并翻译完成', 'success');
+            } catch (error) {
+                console.error('OCR识别并翻译失败:', error);
+                ocrResult.textContent = `错误: ${error.message}`;
+                showStatus('❌ OCR识别并翻译失败', 'error');
+            } finally {
+                setLoading(ocrTranslateBtn, false);
+            }
+        });
+        
+        // WebSocket连接
+        wsConnectBtn.addEventListener('click', async () => {
+            setLoading(wsConnectBtn);
+            try {
+                await sdk.connectWebSocket();
+                wsConnectBtn.disabled = true;
+                wsDisconnectBtn.disabled = false;
+                sendGazeBtn.disabled = false;
+                sendConfigBtn.disabled = false;
+                
+                addWSMessage('WebSocket连接已建立', 'info');
+                showStatus('✅ WebSocket连接成功', 'success');
+                
+                // 设置消息监听器
+                sdk.onWebSocketMessage('translation_result', (message) => {
+                    addWSMessage(`收到翻译结果: ${JSON.stringify(message.payload, null, 2)}`, 'receive');
+                });
+                
+            } catch (error) {
+                console.error('WebSocket连接失败:', error);
+                addWSMessage(`连接失败: ${error.message}`, 'info');
+                showStatus('❌ WebSocket连接失败', 'error');
+            } finally {
+                setLoading(wsConnectBtn, false);
+            }
+        });
+        
+        // WebSocket断开连接
+        wsDisconnectBtn.addEventListener('click', () => {
+            sdk.disconnectWebSocket();
+            wsConnectBtn.disabled = false;
+            wsDisconnectBtn.disabled = true;
+            sendGazeBtn.disabled = true;
+            sendConfigBtn.disabled = true;
+            
+            addWSMessage('WebSocket连接已断开', 'info');
+            showStatus('ℹ️ WebSocket连接已断开', 'info');
+        });
+        
+        // 发送眼动数据
+        sendGazeBtn.addEventListener('click', () => {
+            const gazeData = {
+                x: Math.floor(Math.random() * 800),
+                y: Math.floor(Math.random() * 600),
+                timestamp: Date.now(),
+                confidence: 0.8 + Math.random() * 0.2
+            };
+            
+            sdk.sendGazeData(gazeData);
+            addWSMessage(`发送眼动数据: ${JSON.stringify(gazeData)}`, 'send');
+        });
+        
+        // 发送配置
+        sendConfigBtn.addEventListener('click', () => {
+            const config = {
+                gaze: {
+                    threshold: 2.0,
+                    radius: 50
+                },
+                translation: {
+                    sourceLanguage: sourceLang.value,
+                    targetLanguage: targetLang.value
+                }
+            };
+            
+            sdk.sendConfig(config);
+            addWSMessage(`发送配置: ${JSON.stringify(config)}`, 'send');
+        });
+        
+        // 刷新统计数据
+        async function refreshStats() {
+            setLoading(refreshStatsBtn);
+            try {
+                const stats = await sdk.getStats();
+                displayStats(stats);
+                showStatus('✅ 统计数据已刷新', 'success');
+            } catch (error) {
+                console.error('获取统计数据失败:', error);
+                statsDisplay.innerHTML = `<div class="stat-card"><div class="stat-value">❌</div><div class="stat-label">获取失败</div></div>`;
+                showStatus('❌ 获取统计数据失败', 'error');
+            } finally {
+                setLoading(refreshStatsBtn, false);
+            }
+        }
+        
+        function displayStats(stats) {
+            statsDisplay.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${stats.service.status}</div>
+                    <div class="stat-label">服务状态</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.service.version}</div>
+                    <div class="stat-label">版本</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${Math.floor(stats.service.uptime)}s</div>
+                    <div class="stat-label">运行时间</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.performance.responseTime}</div>
+                    <div class="stat-label">响应时间</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.limits.maxBatchSize}</div>
+                    <div class="stat-label">批量限制</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.limits.rateLimit}</div>
+                    <div class="stat-label">速率限制</div>
+                </div>
+            `;
+        }
+        
+        refreshStatsBtn.addEventListener('click', refreshStats);
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', initializeApp);
+        
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 'Enter':
+                        e.preventDefault();
+                        translateBtn.click();
+                        break;
+                    case 'b':
+                        e.preventDefault();
+                        batchTranslateBtn.click();
+                        break;
+                }
+            }
+        });
+        
+        // 显示快捷键提示
+        console.log(`
+🌐 VR翻译服务 Web应用集成示例
+        
+快捷键:
+- Ctrl/Cmd + Enter: 翻译
+- Ctrl/Cmd + B: 批量翻译
+        
+功能:
+✅ 文本翻译
+✅ 批量翻译
+✅ OCR识别
+✅ OCR识别并翻译
+✅ WebSocket实时通信
+✅ 服务统计监控
+        `);
+    </script>
+</body>
+</html>

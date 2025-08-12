@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  # VR Translation Backend Service
+  vr-translate-backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vr-translate-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"   # HTTP API port
+      - "8081:8081"   # WebSocket port
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - WEBSOCKET_PORT=8081
+      - LOG_LEVEL=info
+      # API Keys (override with .env file)
+      - GOOGLE_VISION_API_KEY=${GOOGLE_VISION_API_KEY:-}
+      - GOOGLE_TRANSLATE_API_KEY=${GOOGLE_TRANSLATE_API_KEY:-}
+      - DEEPL_API_KEY=${DEEPL_API_KEY:-}
+    volumes:
+      # Mount logs directory for persistence
+      - ./backend/logs:/app/logs
+      # Mount config for local overrides
+      - ./backend/config/local.json:/app/config/local.json:ro
+    networks:
+      - vr-translate-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: vr-translate-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - vr-translate-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # MongoDB for data persistence (optional)
+  mongodb:
+    image: mongo:6
+    container_name: vr-translate-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_DATABASE=vr_translate
+    volumes:
+      - mongodb_data:/data/db
+      - ./backend/scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - vr-translate-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx reverse proxy (optional)
+  nginx:
+    image: nginx:alpine
+    container_name: vr-translate-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - vr-translate-backend
+    networks:
+      - vr-translate-network
+
+volumes:
+  redis_data:
+    driver: local
+  mongodb_data:
+    driver: local
+
+networks:
+  vr-translate-network:
+    driver: bridge

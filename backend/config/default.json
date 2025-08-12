@@ -1,0 +1,38 @@
+{
+    "server": {
+        "port": 8080,
+        "websocketPort": 8081,
+        "host": "localhost"
+    },
+    "logging": {
+        "level": "info",
+        "serviceName": "vr-translate-backend",
+        "file": {
+            "enabled": true,
+            "filename": "./logs/app.log",
+            "maxSize": "20m",
+            "maxFiles": 5
+        }
+    },
+    "ocr": {
+        "engine": "mock",
+        "timeout": 10000,
+        "confidenceThreshold": 0.7
+    },
+    "translation": {
+        "engine": "mock",
+        "timeout": 5000,
+        "confidenceThreshold": 0.8
+    },
+    "websocket": {
+        "heartbeatInterval": 30000,
+        "messageTimeout": 10000,
+        "maxMessageSize": 1048576,
+        "compression": true
+    },
+    "cache": {
+        "enabled": false,
+        "ttl": 3600,
+        "maxSize": 1000
+    }
+}

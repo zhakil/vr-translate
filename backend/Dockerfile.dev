@@ -1,0 +1,28 @@
+# Development Dockerfile for VR Translation Service
+
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/cache/apk/*
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including dev dependencies)
+RUN npm install
+
+# Create logs directory
+RUN mkdir -p ./logs
+
+# Expose ports
+EXPOSE 8080 8081 9229
+
+# Start the development server with debugging
+CMD ["npm", "run", "dev"]

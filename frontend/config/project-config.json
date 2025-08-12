@@ -1,0 +1,121 @@
+{
+  "project": {
+    "name": "VR Eye Gaze Translation",
+    "version": "1.0.0",
+    "description": "VR application with eye gaze translation service",
+    "unity_version": "2022.3.0f1",
+    "target_platforms": ["Android", "Windows"]
+  },
+  
+  "vr_settings": {
+    "supported_devices": [
+      {
+        "name": "Pico 4",
+        "sdk": "Pico SDK",
+        "eye_tracking": true,
+        "platform": "Android"
+      },
+      {
+        "name": "Meta Quest 2/3",
+        "sdk": "Meta Quest SDK",
+        "eye_tracking": true,
+        "platform": "Android"
+      },
+      {
+        "name": "Generic OpenXR",
+        "sdk": "OpenXR",
+        "eye_tracking": true,
+        "platform": "Windows"
+      }
+    ],
+    
+    "eye_tracking": {
+      "default_update_rate": 60,
+      "confidence_threshold": 0.7,
+      "gaze_ray_length": 100.0,
+      "calibration_required": true
+    }
+  },
+  
+  "network": {
+    "backend_service": {
+      "default_host": "localhost",
+      "default_http_port": 8080,
+      "default_websocket_port": 8081,
+      "protocol": "websocket",
+      "ssl_enabled": false,
+      "connection_timeout": 10000,
+      "reconnect_attempts": 3,
+      "reconnect_delay": 2000
+    },
+    
+    "message_settings": {
+      "compression_enabled": true,
+      "max_message_size": 1048576,
+      "heartbeat_interval": 30000
+    }
+  },
+  
+  "translation": {
+    "default_settings": {
+      "source_language": "auto",
+      "target_language": "zh-CN",
+      "gaze_threshold": 1.5,
+      "gaze_radius": 0.5,
+      "show_gaze_indicator": true
+    },
+    
+    "supported_languages": [
+      { "code": "auto", "name": "Auto Detect" },
+      { "code": "en", "name": "English" },
+      { "code": "zh-CN", "name": "Chinese (Simplified)" },
+      { "code": "zh-TW", "name": "Chinese (Traditional)" },
+      { "code": "ja", "name": "Japanese" },
+      { "code": "ko", "name": "Korean" },
+      { "code": "es", "name": "Spanish" },
+      { "code": "fr", "name": "French" },
+      { "code": "de", "name": "German" },
+      { "code": "it", "name": "Italian" },
+      { "code": "pt", "name": "Portuguese" },
+      { "code": "ru", "name": "Russian" },
+      { "code": "ar", "name": "Arabic" }
+    ]
+  },
+  
+  "ui": {
+    "translation_display": {
+      "position": "bottom_right",
+      "max_width": 400,
+      "max_height": 200,
+      "background_alpha": 0.8,
+      "text_size": 16,
+      "fade_duration": 0.3,
+      "auto_hide_delay": 5.0
+    },
+    
+    "gaze_indicator": {
+      "enabled": true,
+      "size": 0.1,
+      "normal_color": "#FFFFFF",
+      "gazing_color": "#FFFF00",
+      "triggered_color": "#00FF00",
+      "animation_speed": 2.0
+    }
+  },
+  
+  "performance": {
+    "target_framerate": 90,
+    "adaptive_quality": true,
+    "occlusion_culling": true,
+    "object_pooling": true,
+    "texture_streaming": true
+  },
+  
+  "debug": {
+    "logging_enabled": true,
+    "log_level": "Info",
+    "performance_monitoring": true,
+    "network_logging": false,
+    "eye_tracking_debug": false
+  }
+}
