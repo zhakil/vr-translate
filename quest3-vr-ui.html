@@ -1,0 +1,2628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR翻译专家 - Quest 3专业版</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <!-- CSS Version: 2.0 - Force reload -->
+    <style>
+        :root {
+            --primary-color: #0ea5e9;
+            --secondary-color: #7c3aed;
+            --accent-color: #f59e0b;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --dark-bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.95);
+            --bg-secondary: rgba(15, 23, 42, 0.9);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --border-color: rgba(148, 163, 184, 0.2);
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            --shadow-glow: 0 0 30px rgba(14, 165, 233, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 30%, #334155 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* 背景粒子效果 */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            animation: float 10s infinite linear;
+            opacity: 0.3;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.3; }
+            90% { opacity: 0.3; }
+            100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+        }
+
+        /* 主容器 */
+        .vr-app {
+            display: grid;
+            grid-template-areas: 
+                "header header header"
+                "sidebar main widgets"
+                "sidebar footer widgets";
+            grid-template-columns: 280px 1fr 300px;
+            grid-template-rows: 80px 1fr 60px;
+            min-height: 100vh;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        /* 顶部导航栏 */
+        .vr-header {
+            grid-area: header;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(14, 165, 233, 0.5);
+        }
+
+        .status-indicators {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success-color);
+            box-shadow: 0 0 10px var(--success-color);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.warning { background: var(--warning-color); box-shadow: 0 0 10px var(--warning-color); }
+        .status-dot.error { background: var(--error-color); box-shadow: 0 0 10px var(--error-color); }
+
+        /* 左侧边栏 */
+        .vr-sidebar {
+            grid-area: sidebar;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px 20px;
+            box-shadow: var(--shadow-lg);
+            overflow-y: auto;
+        }
+
+        .nav-section {
+            margin-bottom: 30px;
+        }
+
+        .nav-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: var(--glass-bg);
+            border-color: var(--border-color);
+            transform: translateX(5px);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: var(--shadow-glow);
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        /* 主内容区域 */
+        .vr-main {
+            grid-area: main;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: var(--shadow-lg);
+            overflow-y: auto;
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .content-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .content-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* 翻译区域 */
+        .translation-workspace {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 30px;
+            align-items: start;
+            margin-bottom: 30px;
+        }
+
+        .translation-panel {
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            min-height: 200px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .translation-panel:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 25px rgba(14, 165, 233, 0.2);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .language-selector {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            max-height: 200px;
+        }
+
+        .language-selector option {
+            background: var(--bg-secondary) !important;
+            background-color: rgba(15, 23, 42, 0.95) !important;
+            color: var(--text-primary) !important;
+            color: #f8fafc !important;
+            padding: 4px 8px;
+            font-size: 12px;
+            min-height: 20px;
+            line-height: 1.2;
+        }
+
+        .language-selector optgroup {
+            background: var(--bg-secondary) !important;
+            background-color: rgba(30, 41, 59, 0.95) !important;
+            color: var(--text-secondary) !important;
+            color: #cbd5e1 !important;
+            font-weight: bold;
+            font-size: 11px;
+            padding: 2px 4px;
+        }
+
+        .translation-textarea {
+            width: 100%;
+            height: 120px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 16px;
+            resize: none;
+            outline: none;
+            font-family: inherit;
+            line-height: 1.5;
+        }
+
+        .translation-textarea::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .translate-button-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .translate-main-btn {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-glow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .translate-main-btn:hover {
+            transform: scale(1.1) rotate(10deg);
+            box-shadow: 0 0 40px rgba(14, 165, 233, 0.6);
+        }
+
+        .translate-main-btn:active {
+            transform: scale(0.95);
+        }
+
+        .translate-options {
+            display: flex;
+            gap: 8px;
+        }
+
+        .translate-option-btn {
+            padding: 8px 12px;
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .translate-option-btn:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* 功能按钮组 */
+        .action-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .action-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 10px 16px;
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-btn:hover {
+            background: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(14, 165, 233, 0.3);
+        }
+
+        .action-btn.primary {
+            background: var(--primary-color);
+        }
+
+        .action-btn.success {
+            background: var(--success-color);
+        }
+
+        /* 右侧小部件 */
+        .vr-widgets {
+            grid-area: widgets;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .widget {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .widget-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .widget-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .widget-content {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* 设置面板 */
+        .settings-panel {
+            display: none;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        .settings-panel.active {
+            display: grid;
+        }
+
+        .settings-group {
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .settings-group-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-label {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .setting-description {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .setting-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 开关按钮 */
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 25px;
+            background: var(--border-color);
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: var(--primary-color);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 21px;
+            height: 21px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(25px);
+        }
+
+        /* 下拉选择器 */
+        .select-control {
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            padding: 8px 12px;
+            min-width: 120px;
+            cursor: pointer;
+            max-height: 200px;
+        }
+
+        .select-control option {
+            background: var(--bg-secondary) !important;
+            background-color: rgba(15, 23, 42, 0.95) !important;
+            color: var(--text-primary) !important;
+            color: #f8fafc !important;
+            padding: 4px 8px;
+            font-size: 12px;
+            min-height: 20px;
+            line-height: 1.2;
+        }
+
+        .select-control optgroup {
+            background: var(--bg-secondary) !important;
+            background-color: rgba(30, 41, 59, 0.95) !important;
+            color: var(--text-secondary) !important;
+            color: #cbd5e1 !important;
+            font-weight: bold;
+            font-size: 11px;
+            padding: 2px 4px;
+        }
+
+        /* 超强优先级选择器样式 - 确保最高优先级 */
+        html body .vr-app select option,
+        html body .vr-app .language-selector option,
+        html body .vr-app .select-control option,
+        select[id] option,
+        .language-selector[id] option,
+        .select-control[id] option {
+            background: rgba(15, 23, 42, 0.98) !important;
+            background-color: rgba(15, 23, 42, 0.98) !important;
+            color: #f8fafc !important;
+            padding: 4px 8px !important;
+            min-height: 20px !important;
+            font-size: 12px !important;
+            line-height: 1.2 !important;
+        }
+
+        html body .vr-app select optgroup,
+        html body .vr-app .language-selector optgroup,
+        html body .vr-app .select-control optgroup,
+        select[id] optgroup,
+        .language-selector[id] optgroup,
+        .select-control[id] optgroup {
+            background: rgba(30, 41, 59, 0.98) !important;
+            background-color: rgba(30, 41, 59, 0.98) !important;
+            color: #cbd5e1 !important;
+            font-weight: bold !important;
+            font-size: 11px !important;
+            padding: 2px 4px !important;
+        }
+
+        /* 额外强制样式 */
+        select option:not(:disabled) {
+            background: rgba(15, 23, 42, 0.98) !important;
+            color: #f8fafc !important;
+        }
+
+        select optgroup:not(:disabled) {
+            background: rgba(30, 41, 59, 0.98) !important;
+            color: #cbd5e1 !important;
+        }
+
+        /* 范围滑块 */
+        .range-control {
+            width: 100px;
+            height: 4px;
+            background: var(--border-color);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* 统计信息 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: var(--glass-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-color);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        /* 历史记录 */
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: var(--glass-bg);
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .history-item:hover {
+            background: var(--primary-color);
+            transform: translateX(5px);
+        }
+
+        .history-text {
+            font-size: 12px;
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .history-time {
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        /* 底部状态栏 */
+        .vr-footer {
+            grid-area: footer;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .footer-info {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .footer-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .footer-btn {
+            padding: 8px 16px;
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .footer-btn:hover {
+            background: var(--primary-color);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .vr-app {
+                grid-template-areas: 
+                    "header header"
+                    "sidebar main"
+                    "footer footer";
+                grid-template-columns: 250px 1fr;
+            }
+            
+            .vr-widgets {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .vr-app {
+                grid-template-areas: 
+                    "header"
+                    "main"
+                    "footer";
+                grid-template-columns: 1fr;
+                padding: 10px;
+                gap: 10px;
+            }
+            
+            .vr-sidebar {
+                display: none;
+            }
+            
+            .translation-workspace {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .translate-button-section {
+                order: 2;
+            }
+        }
+
+        /* 加载动画 */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 隐藏类 */
+        .hidden {
+            display: none !important;
+        }
+
+        /* 脉冲动画 */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    
+    <div class="vr-app">
+        <!-- 顶部导航栏 -->
+        <header class="vr-header">
+            <div class="logo-section">
+                <div class="logo">
+                    <i class="fas fa-vr-cardboard"></i> VR翻译专家
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Quest 3 专业版</div>
+            </div>
+            
+            <div class="status-indicators">
+                <div class="status-item">
+                    <div class="status-dot" id="apiStatusDot"></div>
+                    <span id="apiStatusText">API连接</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-dot" id="wsStatusDot"></div>
+                    <span id="wsStatusText">实时通信</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-dot" id="vrStatusDot"></div>
+                    <span id="vrStatusText">VR设备</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 左侧边栏 -->
+        <aside class="vr-sidebar">
+            <div class="nav-section">
+                <div class="nav-title">翻译工具</div>
+                <div class="nav-item active" data-tab="translate">
+                    <i class="fas fa-language"></i>
+                    <span>实时翻译</span>
+                </div>
+                <div class="nav-item" data-tab="batch">
+                    <i class="fas fa-list"></i>
+                    <span>批量翻译</span>
+                </div>
+                <div class="nav-item" data-tab="ocr">
+                    <i class="fas fa-camera"></i>
+                    <span>图像识别</span>
+                </div>
+                <div class="nav-item" data-tab="voice">
+                    <i class="fas fa-microphone"></i>
+                    <span>语音翻译</span>
+                </div>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-title">VR功能</div>
+                <div class="nav-item" data-tab="gaze">
+                    <i class="fas fa-eye"></i>
+                    <span>眼动追踪</span>
+                </div>
+                <div class="nav-item" data-tab="gesture">
+                    <i class="fas fa-hand-paper"></i>
+                    <span>手势控制</span>
+                </div>
+                <div class="nav-item" data-tab="spatial">
+                    <i class="fas fa-cube"></i>
+                    <span>空间翻译</span>
+                </div>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-title">系统</div>
+                <div class="nav-item" data-tab="history">
+                    <i class="fas fa-history"></i>
+                    <span>翻译历史</span>
+                </div>
+                <div class="nav-item" data-tab="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>设置</span>
+                </div>
+                <div class="nav-item" data-tab="help">
+                    <i class="fas fa-question-circle"></i>
+                    <span>帮助</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主内容区域 -->
+        <main class="vr-main">
+            <!-- 翻译界面 -->
+            <div id="translateTab" class="tab-content">
+                <div class="content-header">
+                    <h2 class="content-title">实时翻译</h2>
+                    <div class="content-actions">
+                        <button class="action-btn" onclick="clearTranslation()">
+                            <i class="fas fa-eraser"></i> 清空
+                        </button>
+                        <button class="action-btn" onclick="swapLanguages()">
+                            <i class="fas fa-exchange-alt"></i> 交换
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="translation-workspace">
+                    <div class="translation-panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <i class="fas fa-edit"></i> 源文本
+                            </div>
+                            <select class="language-selector" id="sourceLang">
+                                <option value="auto">🌐 自动检测</option>
+                                <optgroup label="常用语言">
+                                    <option value="EN">🇺🇸 English</option>
+                                    <option value="ZH">🇨🇳 Chinese (simplified)</option>
+                                    <option value="JA">🇯🇵 Japanese</option>
+                                    <option value="KO">🇰🇷 Korean</option>
+                                    <option value="FR">🇫🇷 French</option>
+                                    <option value="DE">🇩🇪 German</option>
+                                    <option value="ES">🇪🇸 Spanish</option>
+                                    <option value="RU">🇷🇺 Russian</option>
+                                </optgroup>
+                                <optgroup label="欧洲语言">
+                                    <option value="IT">🇮🇹 Italian</option>
+                                    <option value="NL">🇳🇱 Dutch</option>
+                                    <option value="PL">🇵🇱 Polish</option>
+                                    <option value="PT">🇵🇹 Portuguese</option>
+                                    <option value="SV">🇸🇪 Swedish</option>
+                                    <option value="DA">🇩🇰 Danish</option>
+                                    <option value="FI">🇫🇮 Finnish</option>
+                                    <option value="CS">🇨🇿 Czech</option>
+                                    <option value="ET">🇪🇪 Estonian</option>
+                                    <option value="HU">🇭🇺 Hungarian</option>
+                                    <option value="LV">🇱🇻 Latvian</option>
+                                    <option value="LT">🇱🇹 Lithuanian</option>
+                                    <option value="SK">🇸🇰 Slovak</option>
+                                    <option value="SL">🇸🇮 Slovenian</option>
+                                    <option value="BG">🇧🇬 Bulgarian</option>
+                                    <option value="RO">🇷🇴 Romanian</option>
+                                    <option value="EL">🇬🇷 Greek</option>
+                                </optgroup>
+                                <optgroup label="其他语言">
+                                    <option value="AR">🇸🇦 Arabic</option>
+                                    <option value="ID">🇮🇩 Indonesian</option>
+                                    <option value="NB">🇳🇴 Norwegian</option>
+                                    <option value="TR">🇹🇷 Turkish</option>
+                                    <option value="UK">🇺🇦 Ukrainian</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <textarea 
+                            id="sourceText" 
+                            class="translation-textarea" 
+                            placeholder="输入要翻译的文本...&#10;&#10;支持语音输入、拖拽文件、粘贴图片等多种输入方式"></textarea>
+                        <div class="action-buttons">
+                            <div class="action-group">
+                                <button class="action-btn" onclick="startVoiceInput()">
+                                    <i class="fas fa-microphone"></i> 语音
+                                </button>
+                                <button class="action-btn" onclick="pasteFromClipboard()">
+                                    <i class="fas fa-clipboard"></i> 粘贴
+                                </button>
+                                <button class="action-btn" onclick="importFile()">
+                                    <i class="fas fa-file-import"></i> 导入
+                                </button>
+                            </div>
+                            <div class="action-group">
+                                <span style="font-size: 12px; color: var(--text-secondary);" id="charCount">0 / 5000</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="translate-button-section">
+                        <button class="translate-main-btn" onclick="translateText()">
+                            <i id="translateIcon" class="fas fa-arrow-right"></i>
+                        </button>
+                        <div class="translate-options">
+                            <button class="translate-option-btn" onclick="setTranslateMode('instant')" data-mode="instant">
+                                即时
+                            </button>
+                            <button class="translate-option-btn active" onclick="setTranslateMode('manual')" data-mode="manual">
+                                手动
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="translation-panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <i class="fas fa-language"></i> 翻译结果
+                            </div>
+                            <select class="language-selector" id="targetLang">
+                                <optgroup label="常用语言">
+                                    <option value="ZH" selected>🇨🇳 Chinese (simplified)</option>
+                                    <option value="EN-US">🇺🇸 English (American)</option>
+                                    <option value="EN-GB">🇬🇧 English (British)</option>
+                                    <option value="JA">🇯🇵 Japanese</option>
+                                    <option value="KO">🇰🇷 Korean</option>
+                                    <option value="FR">🇫🇷 French</option>
+                                    <option value="DE">🇩🇪 German</option>
+                                    <option value="ES">🇪🇸 Spanish</option>
+                                    <option value="RU">🇷🇺 Russian</option>
+                                </optgroup>
+                                <optgroup label="欧洲语言">
+                                    <option value="IT">🇮🇹 Italian</option>
+                                    <option value="NL">🇳🇱 Dutch</option>
+                                    <option value="PL">🇵🇱 Polish</option>
+                                    <option value="PT-PT">🇵🇹 Portuguese (European)</option>
+                                    <option value="PT-BR">🇧🇷 Portuguese (Brazilian)</option>
+                                    <option value="SV">🇸🇪 Swedish</option>
+                                    <option value="DA">🇩🇰 Danish</option>
+                                    <option value="FI">🇫🇮 Finnish</option>
+                                    <option value="CS">🇨🇿 Czech</option>
+                                    <option value="ET">🇪🇪 Estonian</option>
+                                    <option value="HU">🇭🇺 Hungarian</option>
+                                    <option value="LV">🇱🇻 Latvian</option>
+                                    <option value="LT">🇱🇹 Lithuanian</option>
+                                    <option value="SK">🇸🇰 Slovak</option>
+                                    <option value="SL">🇸🇮 Slovenian</option>
+                                    <option value="BG">🇧🇬 Bulgarian</option>
+                                    <option value="RO">🇷🇴 Romanian</option>
+                                    <option value="EL">🇬🇷 Greek</option>
+                                </optgroup>
+                                <optgroup label="中文变体">
+                                    <option value="ZH-HANS">🇨🇳 Chinese (simplified)</option>
+                                    <option value="ZH-HANT">🇹🇼 Chinese (traditional)</option>
+                                </optgroup>
+                                <optgroup label="其他语言">
+                                    <option value="AR">🇸🇦 Arabic</option>
+                                    <option value="ID">🇮🇩 Indonesian</option>
+                                    <option value="NB">🇳🇴 Norwegian</option>
+                                    <option value="TR">🇹🇷 Turkish</option>
+                                    <option value="UK">🇺🇦 Ukrainian</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div id="translatedText" class="translation-textarea" style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success-color); border-radius: 8px; padding: 15px; font-size: 16px; line-height: 1.5;">
+                            翻译结果将显示在这里...
+                        </div>
+                        <div class="action-buttons">
+                            <div class="action-group">
+                                <button class="action-btn" onclick="speakTranslation()">
+                                    <i class="fas fa-volume-up"></i> 朗读
+                                </button>
+                                <button class="action-btn" onclick="copyTranslation()">
+                                    <i class="fas fa-copy"></i> 复制
+                                </button>
+                                <button class="action-btn" onclick="saveTranslation()">
+                                    <i class="fas fa-save"></i> 保存
+                                </button>
+                            </div>
+                            <div class="action-group">
+                                <button class="action-btn success" onclick="addToFavorites()">
+                                    <i class="fas fa-star"></i> 收藏
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 设置界面 -->
+            <div id="settingsTab" class="tab-content settings-panel">
+                <div class="content-header">
+                    <h2 class="content-title">系统设置</h2>
+                    <div class="content-actions">
+                        <button class="action-btn" onclick="resetSettings()">
+                            <i class="fas fa-undo"></i> 重置
+                        </button>
+                        <button class="action-btn primary" onclick="saveSettings()">
+                            <i class="fas fa-save"></i> 保存
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <i class="fas fa-language"></i> 翻译设置
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">默认源语言</div>
+                            <div class="setting-description">设置默认的源语言检测</div>
+                        </div>
+                        <div class="setting-control">
+                            <select class="select-control" id="defaultSourceLang">
+                                <option value="auto">🌐 自动检测</option>
+                                <option value="EN">🇺🇸 English</option>
+                                <option value="ZH">🇨🇳 Chinese (simplified)</option>
+                                <option value="JA">🇯🇵 Japanese</option>
+                                <option value="KO">🇰🇷 Korean</option>
+                                <option value="FR">🇫🇷 French</option>
+                                <option value="DE">🇩🇪 German</option>
+                                <option value="ES">🇪🇸 Spanish</option>
+                                <option value="RU">🇷🇺 Russian</option>
+                                <option value="AR">🇸🇦 Arabic</option>
+                                <option value="BG">🇧🇬 Bulgarian</option>
+                                <option value="CS">🇨🇿 Czech</option>
+                                <option value="DA">🇩🇰 Danish</option>
+                                <option value="EL">🇬🇷 Greek</option>
+                                <option value="ET">🇪🇪 Estonian</option>
+                                <option value="FI">🇫🇮 Finnish</option>
+                                <option value="HU">🇭🇺 Hungarian</option>
+                                <option value="ID">🇮🇩 Indonesian</option>
+                                <option value="IT">🇮🇹 Italian</option>
+                                <option value="LT">🇱🇹 Lithuanian</option>
+                                <option value="LV">🇱🇻 Latvian</option>
+                                <option value="NB">🇳🇴 Norwegian</option>
+                                <option value="NL">🇳🇱 Dutch</option>
+                                <option value="PL">🇵🇱 Polish</option>
+                                <option value="PT">🇵🇹 Portuguese</option>
+                                <option value="RO">🇷🇴 Romanian</option>
+                                <option value="SK">🇸🇰 Slovak</option>
+                                <option value="SL">🇸🇮 Slovenian</option>
+                                <option value="SV">🇸🇪 Swedish</option>
+                                <option value="TR">🇹🇷 Turkish</option>
+                                <option value="UK">🇺🇦 Ukrainian</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">默认目标语言</div>
+                            <div class="setting-description">设置默认的翻译目标语言</div>
+                        </div>
+                        <div class="setting-control">
+                            <select class="select-control" id="defaultTargetLang">
+                                <option value="ZH" selected>🇨🇳 Chinese (simplified)</option>
+                                <option value="EN-US">🇺🇸 English (American)</option>
+                                <option value="EN-GB">🇬🇧 English (British)</option>
+                                <option value="JA">🇯🇵 Japanese</option>
+                                <option value="KO">🇰🇷 Korean</option>
+                                <option value="FR">🇫🇷 French</option>
+                                <option value="DE">🇩🇪 German</option>
+                                <option value="ES">🇪🇸 Spanish</option>
+                                <option value="RU">🇷🇺 Russian</option>
+                                <option value="AR">🇸🇦 Arabic</option>
+                                <option value="BG">🇧🇬 Bulgarian</option>
+                                <option value="CS">🇨🇿 Czech</option>
+                                <option value="DA">🇩🇰 Danish</option>
+                                <option value="EL">🇬🇷 Greek</option>
+                                <option value="ET">🇪🇪 Estonian</option>
+                                <option value="FI">🇫🇮 Finnish</option>
+                                <option value="HU">🇭🇺 Hungarian</option>
+                                <option value="ID">🇮🇩 Indonesian</option>
+                                <option value="IT">🇮🇹 Italian</option>
+                                <option value="LT">🇱🇹 Lithuanian</option>
+                                <option value="LV">🇱🇻 Latvian</option>
+                                <option value="NB">🇳🇴 Norwegian</option>
+                                <option value="NL">🇳🇱 Dutch</option>
+                                <option value="PL">🇵🇱 Polish</option>
+                                <option value="PT-PT">🇵🇹 Portuguese (European)</option>
+                                <option value="PT-BR">🇧🇷 Portuguese (Brazilian)</option>
+                                <option value="RO">🇷🇴 Romanian</option>
+                                <option value="SK">🇸🇰 Slovak</option>
+                                <option value="SL">🇸🇮 Slovenian</option>
+                                <option value="SV">🇸🇪 Swedish</option>
+                                <option value="TR">🇹🇷 Turkish</option>
+                                <option value="UK">🇺🇦 Ukrainian</option>
+                                <option value="ZH-HANS">🇨🇳 Chinese (simplified)</option>
+                                <option value="ZH-HANT">🇹🇼 Chinese (traditional)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">自动翻译</div>
+                            <div class="setting-description">输入文本时自动进行翻译</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle-switch" id="autoTranslate" onclick="toggleSetting(this)"></div>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">翻译缓存</div>
+                            <div class="setting-description">缓存翻译结果以提高响应速度</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle-switch active" id="enableCache" onclick="toggleSetting(this)"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <i class="fas fa-eye"></i> VR眼动设置
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">眼动追踪</div>
+                            <div class="setting-description">启用Quest 3眼动追踪功能</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle-switch active" id="eyeTracking" onclick="toggleSetting(this)"></div>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">凝视触发时间</div>
+                            <div class="setting-description">触发翻译所需的凝视时间（毫秒）</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="range" class="range-control" min="500" max="3000" value="1500" id="gazeTime">
+                            <span id="gazeTimeValue">1.5s</span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">凝视指示器</div>
+                            <div class="setting-description">显示眼动追踪状态指示器</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle-switch active" id="gazeIndicator" onclick="toggleSetting(this)"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <i class="fas fa-hand-paper"></i> 手势控制
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">手势识别</div>
+                            <div class="setting-description">启用Quest 3手势控制功能</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle-switch active" id="handTracking" onclick="toggleSetting(this)"></div>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">手势灵敏度</div>
+                            <div class="setting-description">调整手势识别的灵敏度</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="range" class="range-control" min="1" max="10" value="5" id="gestureSensitivity">
+                            <span id="gestureSensitivityValue">5</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <i class="fas fa-volume-up"></i> 音频设置
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">语音合成</div>
+                            <div class="setting-description">启用翻译结果语音播报</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle-switch active" id="speechSynthesis" onclick="toggleSetting(this)"></div>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">语音识别</div>
+                            <div class="setting-description">启用语音输入功能</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle-switch active" id="speechRecognition" onclick="toggleSetting(this)"></div>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">音量</div>
+                            <div class="setting-description">设置语音播报音量</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="range" class="range-control" min="0" max="100" value="70" id="volume">
+                            <span id="volumeValue">70%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <i class="fas fa-palette"></i> 界面设置
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">主题模式</div>
+                            <div class="setting-description">选择界面主题颜色</div>
+                        </div>
+                        <div class="setting-control">
+                            <select class="select-control" id="themeMode">
+                                <option value="dark">深色模式</option>
+                                <option value="light">浅色模式</option>
+                                <option value="auto">跟随系统</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">字体大小</div>
+                            <div class="setting-description">调整界面字体大小</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="range" class="range-control" min="12" max="24" value="16" id="fontSize">
+                            <span id="fontSizeValue">16px</span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">动画效果</div>
+                            <div class="setting-description">启用界面动画和过渡效果</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle-switch active" id="animations" onclick="toggleSetting(this)"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <i class="fas fa-network-wired"></i> 网络设置
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">API服务器</div>
+                            <div class="setting-description">翻译API服务器地址</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="text" class="select-control" value="http://localhost:3000/api" id="apiUrl" style="width: 200px;">
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">WebSocket地址</div>
+                            <div class="setting-description">实时通信WebSocket地址</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="text" class="select-control" value="ws://localhost:8080" id="wsUrl" style="width: 200px;">
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">请求超时</div>
+                            <div class="setting-description">API请求超时时间（秒）</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="range" class="range-control" min="5" max="30" value="10" id="requestTimeout">
+                            <span id="requestTimeoutValue">10s</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 批量翻译 -->
+            <div id="batchTab" class="tab-content hidden">
+                <div class="content-header">
+                    <h2 class="content-title">批量翻译</h2>
+                    <div class="content-actions">
+                        <button class="action-btn" onclick="clearBatchList()">
+                            <i class="fas fa-trash"></i> 清空
+                        </button>
+                        <button class="action-btn primary" onclick="startBatchTranslation()">
+                            <i class="fas fa-play"></i> 开始翻译
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <i class="fas fa-file-upload"></i> 文件上传
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">文件格式支持</div>
+                            <div class="setting-description">支持 .txt, .csv, .xlsx, .docx 文件</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="file" id="batchFileInput" accept=".txt,.csv,.xlsx,.docx" multiple style="display: none;">
+                            <button class="action-btn" onclick="document.getElementById('batchFileInput').click()">
+                                <i class="fas fa-upload"></i> 选择文件
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="translation-workspace" style="grid-template-columns: 1fr;">
+                    <div class="translation-panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <i class="fas fa-list"></i> 待翻译文本列表
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <select class="language-selector" id="batchSourceLang">
+                                    <option value="auto">🌐 自动检测</option>
+                                    <option value="EN">🇺🇸 English</option>
+                                    <option value="ZH">🇨🇳 Chinese</option>
+                                    <option value="JA">🇯🇵 Japanese</option>
+                                </select>
+                                <select class="language-selector" id="batchTargetLang">
+                                    <option value="ZH" selected>🇨🇳 Chinese</option>
+                                    <option value="EN-US">🇺🇸 English</option>
+                                    <option value="JA">🇯🇵 Japanese</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="batchTextList" style="max-height: 300px; overflow-y: auto; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 15px;">
+                            <div style="text-align: center; color: var(--text-secondary); padding: 40px;">
+                                <i class="fas fa-file-text" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+                                <div>请上传文件或手动添加文本</div>
+                                <button class="action-btn" onclick="addBatchText()" style="margin-top: 15px;">
+                                    <i class="fas fa-plus"></i> 手动添加
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid" style="margin-top: 20px;">
+                    <div class="stat-item">
+                        <span class="stat-value" id="batchTotalCount">0</span>
+                        <span class="stat-label">总数量</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="batchCompletedCount">0</span>
+                        <span class="stat-label">已完成</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="batchProgressPercent">0%</span>
+                        <span class="stat-label">进度</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="batchEstimatedTime">--</span>
+                        <span class="stat-label">预计时间</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OCR图像识别 -->
+            <div id="ocrTab" class="tab-content hidden">
+                <div class="content-header">
+                    <h2 class="content-title">图像识别翻译</h2>
+                    <div class="content-actions">
+                        <button class="action-btn" onclick="clearOCRResult()">
+                            <i class="fas fa-eraser"></i> 清空
+                        </button>
+                        <button class="action-btn primary" onclick="startOCRCapture()">
+                            <i class="fas fa-camera"></i> 拍照识别
+                        </button>
+                    </div>
+                </div>
+
+                <div class="translation-workspace">
+                    <div class="translation-panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <i class="fas fa-image"></i> 图像预览
+                            </div>
+                            <div class="setting-control">
+                                <input type="file" id="ocrFileInput" accept="image/*" style="display: none;">
+                                <button class="action-btn" onclick="document.getElementById('ocrFileInput').click()">
+                                    <i class="fas fa-upload"></i> 上传图片
+                                </button>
+                            </div>
+                        </div>
+                        <div id="ocrImagePreview" style="min-height: 200px; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; position: relative;">
+                            <div style="text-align: center; color: var(--text-secondary);">
+                                <i class="fas fa-image" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+                                <div>请上传图片或使用VR拍照功能</div>
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <div class="action-group">
+                                <button class="action-btn" onclick="rotateImage()">
+                                    <i class="fas fa-redo"></i> 旋转
+                                </button>
+                                <button class="action-btn" onclick="enhanceImage()">
+                                    <i class="fas fa-magic"></i> 增强
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="translate-button-section">
+                        <button class="translate-main-btn" onclick="performOCR()">
+                            <i id="ocrIcon" class="fas fa-search"></i>
+                        </button>
+                        <div class="translate-options">
+                            <button class="translate-option-btn" onclick="setOCRMode('auto')" data-mode="auto">
+                                自动
+                            </button>
+                            <button class="translate-option-btn active" onclick="setOCRMode('manual')" data-mode="manual">
+                                手动
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="translation-panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <i class="fas fa-text-width"></i> 识别文本
+                            </div>
+                            <select class="language-selector" id="ocrTargetLang">
+                                <option value="ZH" selected>🇨🇳 Chinese</option>
+                                <option value="EN-US">🇺🇸 English</option>
+                                <option value="JA">🇯🇵 Japanese</option>
+                            </select>
+                        </div>
+                        <div id="ocrResult" style="min-height: 120px; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success-color); border-radius: 8px; padding: 15px; font-size: 16px; line-height: 1.5;">
+                            OCR识别结果将显示在这里...
+                        </div>
+                        <div class="action-buttons">
+                            <div class="action-group">
+                                <button class="action-btn" onclick="copyOCRResult()">
+                                    <i class="fas fa-copy"></i> 复制
+                                </button>
+                                <button class="action-btn" onclick="editOCRText()">
+                                    <i class="fas fa-edit"></i> 编辑
+                                </button>
+                                <button class="action-btn" onclick="translateOCRText()">
+                                    <i class="fas fa-language"></i> 翻译
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 语音翻译 -->
+            <div id="voiceTab" class="tab-content hidden">
+                <div class="content-header">
+                    <h2 class="content-title">语音翻译</h2>
+                    <div class="content-actions">
+                        <button class="action-btn" onclick="clearVoiceSession()">
+                            <i class="fas fa-eraser"></i> 清空
+                        </button>
+                        <button class="action-btn primary" onclick="toggleVoiceMode()">
+                            <i class="fas fa-microphone"></i> <span id="voiceModeText">开始录音</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <i class="fas fa-cog"></i> 语音设置
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">连续识别</div>
+                            <div class="setting-description">启用连续语音识别模式</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle-switch" id="continuousVoice" onclick="toggleSetting(this)"></div>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">自动翻译</div>
+                            <div class="setting-description">识别完成后自动翻译</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle-switch active" id="autoVoiceTranslate" onclick="toggleSetting(this)"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="translation-workspace">
+                    <div class="translation-panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <i class="fas fa-microphone"></i> 语音输入
+                            </div>
+                            <select class="language-selector" id="voiceSourceLang">
+                                <option value="zh-CN" selected>🇨🇳 中文</option>
+                                <option value="en-US">🇺🇸 English</option>
+                                <option value="ja-JP">🇯🇵 日本語</option>
+                                <option value="ko-KR">🇰🇷 한국어</option>
+                            </select>
+                        </div>
+                        <div id="voiceVisualization" style="height: 80px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center;">
+                            <canvas id="voiceCanvas" width="300" height="60" style="border-radius: 8px;"></canvas>
+                        </div>
+                        <div id="voiceInputText" style="min-height: 100px; background: transparent; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; font-size: 16px; line-height: 1.5;">
+                            语音识别文本将显示在这里...
+                        </div>
+                        <div class="action-buttons">
+                            <div class="action-group">
+                                <button class="action-btn" onclick="pauseVoiceRecording()">
+                                    <i class="fas fa-pause"></i> 暂停
+                                </button>
+                                <button class="action-btn" onclick="stopVoiceRecording()">
+                                    <i class="fas fa-stop"></i> 停止
+                                </button>
+                            </div>
+                            <div class="action-group">
+                                <span style="font-size: 12px; color: var(--text-secondary);" id="voiceStatus">准备就绪</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="translate-button-section">
+                        <button class="translate-main-btn" onclick="translateVoiceText()">
+                            <i id="voiceTranslateIcon" class="fas fa-arrow-right"></i>
+                        </button>
+                        <div class="translate-options">
+                            <button class="translate-option-btn" onclick="setVoiceMode('realtime')" data-mode="realtime">
+                                实时
+                            </button>
+                            <button class="translate-option-btn active" onclick="setVoiceMode('complete')" data-mode="complete">
+                                完整
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="translation-panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <i class="fas fa-volume-up"></i> 翻译播报
+                            </div>
+                            <select class="language-selector" id="voiceTargetLang">
+                                <option value="ZH" selected>🇨🇳 Chinese</option>
+                                <option value="EN-US">🇺🇸 English</option>
+                                <option value="JA">🇯🇵 Japanese</option>
+                            </select>
+                        </div>
+                        <div id="voiceTranslationResult" style="min-height: 120px; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success-color); border-radius: 8px; padding: 15px; font-size: 16px; line-height: 1.5;">
+                            语音翻译结果将显示在这里...
+                        </div>
+                        <div class="action-buttons">
+                            <div class="action-group">
+                                <button class="action-btn" onclick="playVoiceTranslation()">
+                                    <i class="fas fa-play"></i> 播放
+                                </button>
+                                <button class="action-btn" onclick="adjustVoiceSpeed()">
+                                    <i class="fas fa-tachometer-alt"></i> 语速
+                                </button>
+                            </div>
+                            <div class="action-group">
+                                <button class="action-btn success" onclick="saveVoiceSession()">
+                                    <i class="fas fa-save"></i> 保存会话
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 眼动追踪 -->
+            <div id="gazeTab" class="tab-content hidden">
+                <div class="content-header">
+                    <h2 class="content-title">眼动追踪翻译</h2>
+                    <div class="content-actions">
+                        <button class="action-btn" onclick="calibrateEyeTracking()">
+                            <i class="fas fa-crosshairs"></i> 校准
+                        </button>
+                        <button class="action-btn primary" onclick="toggleGazeMode()">
+                            <i class="fas fa-eye"></i> <span id="gazeToggleText">开启眼动</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stats-grid" style="margin-bottom: 30px;">
+                    <div class="stat-item">
+                        <span class="stat-value" id="gazeAccuracy">95%</span>
+                        <span class="stat-label">追踪精度</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="gazeLatency">12ms</span>
+                        <span class="stat-label">响应延迟</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="gazeZones">8</span>
+                        <span class="stat-label">热区数量</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="gazeTriggers">24</span>
+                        <span class="stat-label">触发次数</span>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <i class="fas fa-bullseye"></i> 凝视热图
+                    </div>
+                    <div id="gazeHeatmap" style="height: 300px; background: rgba(255,255,255,0.05); border-radius: 12px; position: relative; overflow: hidden;">
+                        <canvas id="gazeCanvas" width="400" height="300" style="width: 100%; height: 100%; border-radius: 12px;"></canvas>
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--text-secondary);">
+                            <i class="fas fa-eye" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+                            <div>眼动数据将在此处可视化显示</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <i class="fas fa-cog"></i> 高级设置
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">凝视区域大小</div>
+                            <div class="setting-description">调整凝视检测的区域范围</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="range" class="range-control" min="10" max="100" value="30" id="gazeZoneSize">
+                            <span id="gazeZoneSizeValue">30px</span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">文本检测模式</div>
+                            <div class="setting-description">选择文本识别的检测模式</div>
+                        </div>
+                        <div class="setting-control">
+                            <select class="select-control" id="textDetectionMode">
+                                <option value="auto">自动检测</option>
+                                <option value="ocr">OCR识别</option>
+                                <option value="dom">DOM元素</option>
+                                <option value="hybrid">混合模式</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 手势控制 -->
+            <div id="gestureTab" class="tab-content hidden">
+                <div class="content-header">
+                    <h2 class="content-title">手势控制</h2>
+                    <div class="content-actions">
+                        <button class="action-btn" onclick="trainGestures()">
+                            <i class="fas fa-graduation-cap"></i> 训练
+                        </button>
+                        <button class="action-btn primary" onclick="toggleHandTracking()">
+                            <i class="fas fa-hand-paper"></i> <span id="handTrackingText">开启手势</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="translation-workspace" style="grid-template-columns: 1fr 1fr;">
+                    <div class="translation-panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <i class="fas fa-hand-rock"></i> 手势识别
+                            </div>
+                        </div>
+                        <div id="handVisualization" style="height: 250px; background: rgba(255,255,255,0.05); border-radius: 8px; position: relative;">
+                            <canvas id="handCanvas" width="300" height="250" style="width: 100%; height: 100%; border-radius: 8px;"></canvas>
+                        </div>
+                        <div style="margin-top: 15px; text-align: center;">
+                            <div style="font-size: 14px; color: var(--text-secondary);">当前手势</div>
+                            <div id="currentGesture" style="font-size: 24px; font-weight: bold; color: var(--primary-color); margin-top: 5px;">无</div>
+                        </div>
+                    </div>
+
+                    <div class="translation-panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <i class="fas fa-list"></i> 手势命令
+                            </div>
+                        </div>
+                        <div style="max-height: 250px; overflow-y: auto;">
+                            <div class="gesture-command" data-gesture="thumbsup">
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border-color);">
+                                    <div>
+                                        <div style="font-weight: 600;">👍 点赞</div>
+                                        <div style="font-size: 12px; color: var(--text-secondary);">确认翻译结果</div>
+                                    </div>
+                                    <div class="toggle-switch active" onclick="toggleGestureCommand(this, 'thumbsup')"></div>
+                                </div>
+                            </div>
+                            <div class="gesture-command" data-gesture="peace">
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border-color);">
+                                    <div>
+                                        <div style="font-weight: 600;">✌️ 胜利</div>
+                                        <div style="font-size: 12px; color: var(--text-secondary);">开始/停止翻译</div>
+                                    </div>
+                                    <div class="toggle-switch active" onclick="toggleGestureCommand(this, 'peace')"></div>
+                                </div>
+                            </div>
+                            <div class="gesture-command" data-gesture="fist">
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border-color);">
+                                    <div>
+                                        <div style="font-weight: 600;">✊ 拳头</div>
+                                        <div style="font-size: 12px; color: var(--text-secondary);">清空内容</div>
+                                    </div>
+                                    <div class="toggle-switch active" onclick="toggleGestureCommand(this, 'fist')"></div>
+                                </div>
+                            </div>
+                            <div class="gesture-command" data-gesture="point">
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border-color);">
+                                    <div>
+                                        <div style="font-weight: 600;">👉 指向</div>
+                                        <div style="font-size: 12px; color: var(--text-secondary);">选择文本区域</div>
+                                    </div>
+                                    <div class="toggle-switch active" onclick="toggleGestureCommand(this, 'point')"></div>
+                                </div>
+                            </div>
+                            <div class="gesture-command" data-gesture="wave">
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px;">
+                                    <div>
+                                        <div style="font-weight: 600;">👋 挥手</div>
+                                        <div style="font-size: 12px; color: var(--text-secondary);">语言切换</div>
+                                    </div>
+                                    <div class="toggle-switch" onclick="toggleGestureCommand(this, 'wave')"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 空间翻译 -->
+            <div id="spatialTab" class="tab-content hidden">
+                <div class="content-header">
+                    <h2 class="content-title">空间翻译</h2>
+                    <div class="content-actions">
+                        <button class="action-btn" onclick="resetSpatialView()">
+                            <i class="fas fa-sync"></i> 重置视角
+                        </button>
+                        <button class="action-btn primary" onclick="toggleSpatialMode()">
+                            <i class="fas fa-cube"></i> <span id="spatialModeText">开启空间模式</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="translation-workspace" style="grid-template-columns: 2fr 1fr;">
+                    <div class="translation-panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <i class="fas fa-globe"></i> 3D空间视图
+                            </div>
+                        </div>
+                        <div id="spatialView" style="height: 350px; background: rgba(255,255,255,0.05); border-radius: 8px; position: relative;">
+                            <canvas id="spatialCanvas" width="600" height="350" style="width: 100%; height: 100%; border-radius: 8px;"></canvas>
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--text-secondary);">
+                                <i class="fas fa-cube" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+                                <div>3D空间翻译视图</div>
+                                <div style="font-size: 12px; margin-top: 10px;">使用VR控制器或手势进行交互</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="translation-panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <i class="fas fa-layer-group"></i> 翻译图层
+                            </div>
+                        </div>
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            <div class="spatial-layer" data-layer="ui">
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border-color);">
+                                    <div>
+                                        <div style="font-size: 12px; font-weight: 600;">UI界面层</div>
+                                        <div style="font-size: 10px; color: var(--text-secondary);">距离: 1.2m</div>
+                                    </div>
+                                    <div class="toggle-switch active" onclick="toggleSpatialLayer(this, 'ui')"></div>
+                                </div>
+                            </div>
+                            <div class="spatial-layer" data-layer="text">
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border-color);">
+                                    <div>
+                                        <div style="font-size: 12px; font-weight: 600;">文本浮窗层</div>
+                                        <div style="font-size: 10px; color: var(--text-secondary);">距离: 0.8m</div>
+                                    </div>
+                                    <div class="toggle-switch active" onclick="toggleSpatialLayer(this, 'text')"></div>
+                                </div>
+                            </div>
+                            <div class="spatial-layer" data-layer="subtitle">
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border-color);">
+                                    <div>
+                                        <div style="font-size: 12px; font-weight: 600;">字幕层</div>
+                                        <div style="font-size: 10px; color: var(--text-secondary);">距离: 2.0m</div>
+                                    </div>
+                                    <div class="toggle-switch" onclick="toggleSpatialLayer(this, 'subtitle')"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px;">
+                            <div style="font-size: 12px; font-weight: 600; margin-bottom: 10px;">空间设置</div>
+                            <div class="setting-item" style="padding: 8px 0;">
+                                <div style="font-size: 11px;">显示距离</div>
+                                <div style="display: flex; align-items: center; gap: 10px; margin-top: 5px;">
+                                    <input type="range" class="range-control" min="50" max="300" value="120" id="spatialDistance" style="width: 80px;">
+                                    <span id="spatialDistanceValue" style="font-size: 10px;">1.2m</span>
+                                </div>
+                            </div>
+                            <div class="setting-item" style="padding: 8px 0;">
+                                <div style="font-size: 11px;">透明度</div>
+                                <div style="display: flex; align-items: center; gap: 10px; margin-top: 5px;">
+                                    <input type="range" class="range-control" min="20" max="100" value="85" id="spatialOpacity" style="width: 80px;">
+                                    <span id="spatialOpacityValue" style="font-size: 10px;">85%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 翻译历史 -->
+            <div id="historyTab" class="tab-content hidden">
+                <div class="content-header">
+                    <h2 class="content-title">翻译历史</h2>
+                    <div class="content-actions">
+                        <button class="action-btn" onclick="syncHistory()">
+                            <i class="fas fa-sync"></i> 同步
+                        </button>
+                        <button class="action-btn" onclick="exportHistory()">
+                            <i class="fas fa-download"></i> 导出
+                        </button>
+                        <button class="action-btn" onclick="clearHistory()">
+                            <i class="fas fa-trash"></i> 清空
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <i class="fas fa-filter"></i> 筛选选项
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <select class="select-control" id="historyDateFilter">
+                            <option value="all">全部时间</option>
+                            <option value="today">今天</option>
+                            <option value="week">本周</option>
+                            <option value="month">本月</option>
+                        </select>
+                        <select class="select-control" id="historyLangFilter">
+                            <option value="all">全部语言</option>
+                            <option value="en-zh">英→中</option>
+                            <option value="zh-en">中→英</option>
+                            <option value="ja-zh">日→中</option>
+                        </select>
+                        <input type="text" class="select-control" placeholder="搜索关键词..." id="historySearchInput">
+                    </div>
+                </div>
+
+                <div id="historyList" style="max-height: 400px; overflow-y: auto;">
+                    <!-- 历史记录将在这里动态加载 -->
+                </div>
+
+                <div class="stats-grid" style="margin-top: 20px;">
+                    <div class="stat-item">
+                        <span class="stat-value" id="historyTotalCount">0</span>
+                        <span class="stat-label">总记录数</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="historyTodayCount">0</span>
+                        <span class="stat-label">今日翻译</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="historyFavoriteCount">0</span>
+                        <span class="stat-label">收藏数量</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="historySyncStatus">未同步</span>
+                        <span class="stat-label">同步状态</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 右侧小部件 -->
+        <aside class="vr-widgets">
+            <!-- 统计信息 -->
+            <div class="widget">
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <i class="fas fa-chart-line"></i> 使用统计
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-value" id="translationCount">0</span>
+                            <span class="stat-label">翻译次数</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="successRate">100%</span>
+                            <span class="stat-label">成功率</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="avgLatency">--</span>
+                            <span class="stat-label">平均延迟</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="gazeCount">0</span>
+                            <span class="stat-label">眼动数据</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 快速操作 -->
+            <div class="widget">
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <i class="fas fa-bolt"></i> 快速操作
+                    </div>
+                </div>
+                <div class="widget-content">
+                    <button class="action-btn" style="width: 100%; margin-bottom: 10px;" onclick="toggleGazeMode()">
+                        <i class="fas fa-eye"></i> <span id="gazeModeText">开启眼动翻译</span>
+                    </button>
+                    <button class="action-btn" style="width: 100%; margin-bottom: 10px;" onclick="takeScreenshot()">
+                        <i class="fas fa-camera"></i> 屏幕翻译
+                    </button>
+                    <button class="action-btn" style="width: 100%; margin-bottom: 10px;" onclick="clearHistory()">
+                        <i class="fas fa-trash"></i> 清空历史
+                    </button>
+                    <button class="action-btn" style="width: 100%;" onclick="runSystemTest()">
+                        <i class="fas fa-stethoscope"></i> 系统诊断
+                    </button>
+                </div>
+            </div>
+
+            <!-- 最近翻译 -->
+            <div class="widget">
+                <div class="widget-header">
+                    <div class="widget-title">
+                        <i class="fas fa-clock"></i> 最近翻译
+                    </div>
+                </div>
+                <div class="widget-content" id="recentTranslations">
+                    <div style="text-align: center; color: var(--text-secondary); font-size: 12px; padding: 20px;">
+                        暂无翻译记录
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 底部状态栏 -->
+        <footer class="vr-footer">
+            <div class="footer-info">
+                <span>VR翻译专家 v2.0 | Quest 3优化版</span>
+                <span style="margin-left: 20px;">运行时间: <span id="uptime">00:00:00</span></span>
+            </div>
+            <div class="footer-actions">
+                <button class="footer-btn" onclick="checkConnectivity()">
+                    <i class="fas fa-wifi"></i> 连接测试
+                </button>
+                <button class="footer-btn" onclick="exportSettings()">
+                    <i class="fas fa-download"></i> 导出设置
+                </button>
+                <button class="footer-btn" onclick="showAbout()">
+                    <i class="fas fa-info-circle"></i> 关于
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // VR翻译专家应用主控制器
+        class VRTranslationApp {
+            constructor() {
+                this.ws = null;
+                this.isGazeModeActive = false;
+                this.translationCount = 0;
+                this.gazeDataCount = 0;
+                this.startTime = Date.now();
+                this.currentTab = 'translate';
+                this.settings = this.loadSettings();
+                this.history = this.loadHistory();
+                
+                this.apiBaseUrl = this.settings.apiUrl || 'http://localhost:3000/api';
+                this.wsUrl = this.settings.wsUrl || 'ws://localhost:8080';
+                
+                this.init();
+            }
+
+            async init() {
+                console.log('🥽 初始化VR翻译专家...');
+                
+                // 初始化背景粒子
+                this.initParticles();
+                
+                // 初始化事件监听
+                this.initEventListeners();
+                
+                // 连接WebSocket
+                this.connectWebSocket();
+                
+                // 检查API状态
+                await this.checkAPIStatus();
+                
+                // 应用设置
+                this.applySettings();
+                
+                // 定期更新状态
+                setInterval(() => this.updateStatus(), 2000);
+                setInterval(() => this.updateUptime(), 1000);
+                
+                console.log('✅ VR翻译专家初始化完成');
+            }
+
+            initParticles() {
+                const particlesContainer = document.getElementById('particles');
+                const particleCount = 50;
+                
+                for (let i = 0; i < particleCount; i++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.style.left = Math.random() * 100 + '%';
+                    particle.style.animationDelay = Math.random() * 10 + 's';
+                    particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
+                    particlesContainer.appendChild(particle);
+                }
+            }
+
+            initEventListeners() {
+                // 标签页切换
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        const tab = e.currentTarget.dataset.tab;
+                        this.switchTab(tab);
+                    });
+                });
+
+                // 字符计数
+                document.getElementById('sourceText').addEventListener('input', (e) => {
+                    const count = e.target.value.length;
+                    document.getElementById('charCount').textContent = `${count} / 5000`;
+                    
+                    if (this.settings.autoTranslate && count > 0) {
+                        clearTimeout(this.autoTranslateTimer);
+                        this.autoTranslateTimer = setTimeout(() => {
+                            this.translateText();
+                        }, 1000);
+                    }
+                });
+
+                // 设置滑块事件
+                this.initSettingSliders();
+            }
+
+            initSettingSliders() {
+                const sliders = ['gazeTime', 'gestureSensitivity', 'volume', 'fontSize', 'requestTimeout'];
+                
+                sliders.forEach(sliderId => {
+                    const slider = document.getElementById(sliderId);
+                    const valueSpan = document.getElementById(sliderId + 'Value');
+                    
+                    if (slider && valueSpan) {
+                        slider.addEventListener('input', (e) => {
+                            let value = e.target.value;
+                            let displayValue = value;
+                            
+                            switch(sliderId) {
+                                case 'gazeTime':
+                                    displayValue = (value / 1000).toFixed(1) + 's';
+                                    break;
+                                case 'volume':
+                                    displayValue = value + '%';
+                                    break;
+                                case 'fontSize':
+                                    displayValue = value + 'px';
+                                    break;
+                                case 'requestTimeout':
+                                    displayValue = value + 's';
+                                    break;
+                            }
+                            
+                            valueSpan.textContent = displayValue;
+                        });
+                    }
+                });
+            }
+
+            switchTab(tabName) {
+                // 更新导航状态
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+                // 隐藏所有标签页内容
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                });
+
+                // 显示目标标签页
+                const targetTab = document.getElementById(tabName + 'Tab');
+                if (targetTab) {
+                    targetTab.classList.remove('hidden');
+                    if (tabName === 'settings') {
+                        targetTab.classList.add('active');
+                    }
+                }
+
+                this.currentTab = tabName;
+            }
+
+            connectWebSocket() {
+                try {
+                    this.ws = new WebSocket(this.wsUrl);
+                    
+                    this.ws.onopen = () => {
+                        console.log('✅ WebSocket连接成功');
+                        this.updateStatusIndicator('ws', 'success', '实时通信');
+                    };
+                    
+                    this.ws.onmessage = (event) => {
+                        try {
+                            const message = JSON.parse(event.data);
+                            this.handleWebSocketMessage(message);
+                        } catch (error) {
+                            console.log('收到原始消息:', event.data);
+                        }
+                    };
+                    
+                    this.ws.onclose = () => {
+                        console.log('❌ WebSocket连接断开');
+                        this.updateStatusIndicator('ws', 'error', '连接断开');
+                        setTimeout(() => this.connectWebSocket(), 5000);
+                    };
+                    
+                    this.ws.onerror = (error) => {
+                        console.error('WebSocket错误:', error);
+                        this.updateStatusIndicator('ws', 'error', '连接失败');
+                    };
+                    
+                } catch (error) {
+                    console.error('WebSocket连接失败:', error);
+                    this.updateStatusIndicator('ws', 'error', '连接失败');
+                }
+            }
+
+            handleWebSocketMessage(message) {
+                console.log('📥 收到WebSocket消息:', message);
+                
+                if (message.type === 'gaze') {
+                    this.gazeDataCount++;
+                    document.getElementById('gazeCount').textContent = this.gazeDataCount;
+                } else if (message.type === 'screenshot_ready') {
+                    this.handleScreenshotReady(message.payload);
+                }
+            }
+
+            async checkAPIStatus() {
+                try {
+                    const startTime = Date.now();
+                    const response = await fetch(`${this.apiBaseUrl}/stats`);
+                    const latency = Date.now() - startTime;
+                    
+                    if (response.ok) {
+                        this.updateStatusIndicator('api', 'success', 'API连接');
+                        document.getElementById('avgLatency').textContent = latency + 'ms';
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error('API状态检查失败:', error);
+                    this.updateStatusIndicator('api', 'error', 'API离线');
+                }
+            }
+
+            updateStatusIndicator(type, status, text) {
+                const dot = document.getElementById(type + 'StatusDot');
+                const textElement = document.getElementById(type + 'StatusText');
+                
+                if (dot && textElement) {
+                    dot.className = `status-dot ${status}`;
+                    textElement.textContent = text;
+                }
+            }
+
+            async translateText() {
+                const sourceText = document.getElementById('sourceText').value.trim();
+                if (!sourceText) {
+                    alert('请输入要翻译的文本');
+                    return;
+                }
+
+                const sourceLang = document.getElementById('sourceLang').value;
+                const targetLang = document.getElementById('targetLang').value;
+
+                // 显示加载状态
+                document.getElementById('translateIcon').innerHTML = '<div class="loading-spinner"></div>';
+                document.getElementById('translatedText').textContent = '正在翻译...';
+
+                try {
+                    const startTime = Date.now();
+                    const response = await fetch(`${this.apiBaseUrl}/translate`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            text: sourceText,
+                            sourceLang: sourceLang,
+                            targetLang: targetLang
+                        })
+                    });
+
+                    const latency = Date.now() - startTime;
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    
+                    // 显示翻译结果
+                    document.getElementById('translatedText').innerHTML = `
+                        <div style="font-size: 18px; line-height: 1.6; margin-bottom: 10px;">
+                            ${result.data.translation}
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 10px;">
+                            ${result.data.sourceLang} → ${result.data.targetLang} | ${latency}ms | ${new Date().toLocaleTimeString()}
+                        </div>
+                    `;
+
+                    this.translationCount++;
+                    document.getElementById('translationCount').textContent = this.translationCount;
+                    document.getElementById('avgLatency').textContent = latency + 'ms';
+
+                    // 添加到历史记录
+                    this.addToHistory(sourceText, result.data.translation, sourceLang, targetLang);
+
+                } catch (error) {
+                    console.error('翻译失败:', error);
+                    document.getElementById('translatedText').innerHTML = `
+                        <div style="color: var(--error-color); font-size: 16px;">
+                            翻译失败: ${error.message}
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 10px;">
+                            请检查网络连接和服务器状态
+                        </div>
+                    `;
+                } finally {
+                    document.getElementById('translateIcon').innerHTML = '<i class="fas fa-arrow-right"></i>';
+                }
+            }
+
+            addToHistory(source, translation, sourceLang, targetLang) {
+                const historyItem = {
+                    id: Date.now(),
+                    source,
+                    translation,
+                    sourceLang,
+                    targetLang,
+                    timestamp: new Date().toISOString()
+                };
+
+                this.history.unshift(historyItem);
+                if (this.history.length > 100) {
+                    this.history = this.history.slice(0, 100);
+                }
+
+                this.saveHistory();
+                this.updateRecentTranslations();
+            }
+
+            updateRecentTranslations() {
+                const container = document.getElementById('recentTranslations');
+                const recent = this.history.slice(0, 3);
+
+                if (recent.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; color: var(--text-secondary); font-size: 12px; padding: 20px;">暂无翻译记录</div>';
+                    return;
+                }
+
+                container.innerHTML = recent.map(item => `
+                    <div class="history-item" onclick="loadTranslation('${item.source}')">
+                        <div class="history-text">
+                            <div style="font-weight: 600; margin-bottom: 2px;">${item.source.substring(0, 20)}${item.source.length > 20 ? '...' : ''}</div>
+                            <div style="font-size: 11px; color: var(--text-secondary);">${item.translation.substring(0, 30)}${item.translation.length > 30 ? '...' : ''}</div>
+                        </div>
+                        <div class="history-time">${new Date(item.timestamp).toLocaleTimeString()}</div>
+                    </div>
+                `).join('');
+            }
+
+            updateStatus() {
+                this.checkAPIStatus();
+                
+                // 检查VR设备状态
+                if (navigator.userAgent.includes('Quest') || navigator.userAgent.includes('Oculus')) {
+                    this.updateStatusIndicator('vr', 'success', 'Quest 3');
+                } else {
+                    this.updateStatusIndicator('vr', 'warning', '模拟模式');
+                }
+            }
+
+            updateUptime() {
+                const uptime = Date.now() - this.startTime;
+                const hours = Math.floor(uptime / 3600000).toString().padStart(2, '0');
+                const minutes = Math.floor((uptime % 3600000) / 60000).toString().padStart(2, '0');
+                const seconds = Math.floor((uptime % 60000) / 1000).toString().padStart(2, '0');
+                
+                document.getElementById('uptime').textContent = `${hours}:${minutes}:${seconds}`;
+            }
+
+            loadSettings() {
+                const defaultSettings = {
+                    autoTranslate: false,
+                    enableCache: true,
+                    eyeTracking: true,
+                    gazeTime: 1500,
+                    handTracking: true,
+                    gestureSensitivity: 5,
+                    speechSynthesis: true,
+                    speechRecognition: true,
+                    volume: 70,
+                    themeMode: 'dark',
+                    fontSize: 16,
+                    animations: true,
+                    apiUrl: 'http://localhost:3000/api',
+                    wsUrl: 'ws://localhost:8080',
+                    requestTimeout: 10
+                };
+
+                const stored = localStorage.getItem('vrTranslateSettings');
+                return stored ? { ...defaultSettings, ...JSON.parse(stored) } : defaultSettings;
+            }
+
+            saveSettings() {
+                localStorage.setItem('vrTranslateSettings', JSON.stringify(this.settings));
+                console.log('✅ 设置已保存');
+            }
+
+            loadHistory() {
+                const stored = localStorage.getItem('vrTranslateHistory');
+                return stored ? JSON.parse(stored) : [];
+            }
+
+            saveHistory() {
+                localStorage.setItem('vrTranslateHistory', JSON.stringify(this.history));
+            }
+
+            applySettings() {
+                // 应用各种设置到界面
+                Object.keys(this.settings).forEach(key => {
+                    const element = document.getElementById(key);
+                    if (element) {
+                        if (element.type === 'range') {
+                            element.value = this.settings[key];
+                            const event = new Event('input');
+                            element.dispatchEvent(event);
+                        } else if (element.classList.contains('toggle-switch')) {
+                            if (this.settings[key]) {
+                                element.classList.add('active');
+                            } else {
+                                element.classList.remove('active');
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // 全局应用实例
+        let app;
+
+        // 页面加载完成后初始化
+        window.addEventListener('load', () => {
+            app = new VRTranslationApp();
+        });
+
+        // 全局功能函数
+        function translateText() {
+            app.translateText();
+        }
+
+        function toggleSetting(element) {
+            element.classList.toggle('active');
+            const setting = element.id;
+            app.settings[setting] = element.classList.contains('active');
+        }
+
+        function toggleGazeMode() {
+            app.isGazeModeActive = !app.isGazeModeActive;
+            const buttonText = document.getElementById('gazeModeText');
+            
+            if (app.isGazeModeActive) {
+                buttonText.textContent = '关闭眼动翻译';
+                console.log('🎯 眼动翻译模式已开启');
+            } else {
+                buttonText.textContent = '开启眼动翻译';
+                console.log('⏸️ 眼动翻译模式已关闭');
+            }
+        }
+
+        function startVoiceInput() {
+            if ('webkitSpeechRecognition' in window) {
+                const recognition = new webkitSpeechRecognition();
+                recognition.lang = 'zh-CN';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                recognition.onstart = () => {
+                    console.log('🎤 语音识别开始...');
+                };
+
+                recognition.onresult = (event) => {
+                    const result = event.results[0][0].transcript;
+                    document.getElementById('sourceText').value = result;
+                    document.getElementById('sourceText').dispatchEvent(new Event('input'));
+                    console.log('🎤 语音识别结果:', result);
+                };
+
+                recognition.onerror = (event) => {
+                    console.error('语音识别错误:', event.error);
+                };
+
+                recognition.start();
+            } else {
+                alert('浏览器不支持语音识别');
+            }
+        }
+
+        function pasteFromClipboard() {
+            navigator.clipboard.readText().then(text => {
+                document.getElementById('sourceText').value = text;
+                document.getElementById('sourceText').dispatchEvent(new Event('input'));
+            }).catch(err => {
+                console.error('剪贴板读取失败:', err);
+            });
+        }
+
+        function speakTranslation() {
+            const textElement = document.getElementById('translatedText');
+            const text = textElement.textContent || textElement.innerText;
+            
+            if (text && text !== '翻译结果将显示在这里...') {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = document.getElementById('targetLang').value;
+                utterance.volume = app.settings.volume / 100;
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        function copyTranslation() {
+            const textElement = document.getElementById('translatedText');
+            const text = textElement.textContent || textElement.innerText;
+            
+            if (text && text !== '翻译结果将显示在这里...') {
+                navigator.clipboard.writeText(text).then(() => {
+                    console.log('翻译结果已复制到剪贴板');
+                    // 显示复制成功提示
+                });
+            }
+        }
+
+        function clearTranslation() {
+            document.getElementById('sourceText').value = '';
+            document.getElementById('translatedText').innerHTML = '翻译结果将显示在这里...';
+            document.getElementById('charCount').textContent = '0 / 5000';
+        }
+
+        function swapLanguages() {
+            const sourceLang = document.getElementById('sourceLang');
+            const targetLang = document.getElementById('targetLang');
+            const sourceText = document.getElementById('sourceText');
+            const translatedText = document.getElementById('translatedText');
+            
+            // 交换语言选择
+            const tempLang = sourceLang.value;
+            sourceLang.value = targetLang.value;
+            targetLang.value = tempLang;
+            
+            // 交换文本内容
+            const tempText = sourceText.value;
+            sourceText.value = translatedText.textContent || translatedText.innerText;
+            translatedText.innerHTML = tempText || '翻译结果将显示在这里...';
+        }
+
+        function saveSettings() {
+            app.saveSettings();
+            alert('设置已保存');
+        }
+
+        function resetSettings() {
+            if (confirm('确定要重置所有设置吗？')) {
+                localStorage.removeItem('vrTranslateSettings');
+                location.reload();
+            }
+        }
+
+        function takeScreenshot() {
+            if (app.ws && app.ws.readyState === WebSocket.OPEN) {
+                app.ws.send(JSON.stringify({
+                    type: 'screenshot',
+                    payload: { timestamp: Date.now() }
+                }));
+                console.log('📷 请求屏幕截图...');
+            } else {
+                alert('WebSocket未连接，无法截图');
+            }
+        }
+
+        function runSystemTest() {
+            console.log('🔧 开始系统诊断...');
+            app.checkAPIStatus();
+            
+            if (app.ws && app.ws.readyState === WebSocket.OPEN) {
+                app.ws.send(JSON.stringify({
+                    type: 'ping',
+                    payload: { timestamp: Date.now() }
+                }));
+            }
+            
+            alert('系统诊断完成，请查看控制台日志');
+        }
+
+        function clearHistory() {
+            if (confirm('确定要清空所有翻译历史吗？')) {
+                app.history = [];
+                app.saveHistory();
+                app.updateRecentTranslations();
+            }
+        }
+
+        function loadTranslation(text) {
+            document.getElementById('sourceText').value = text;
+            document.getElementById('sourceText').dispatchEvent(new Event('input'));
+        }
+
+        function checkConnectivity() {
+            app.checkAPIStatus();
+            alert('连接测试完成，请查看状态指示器');
+        }
+
+        function exportSettings() {
+            const dataStr = JSON.stringify(app.settings, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'vr-translate-settings.json';
+            link.click();
+        }
+
+        function showAbout() {
+            alert(`VR翻译专家 v2.0
+Quest 3专业版
+
+🎯 专为Meta Quest 3优化
+⚡ 支持实时翻译
+👁️ 眼动追踪控制
+🤲 手势识别
+🎤 语音输入输出
+📱 现代化UI设计
+
+© 2024 VR Translation Expert`);
+        }
+    </script>
+</body>
+</html>

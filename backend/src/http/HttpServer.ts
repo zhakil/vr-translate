@@ -3,6 +3,7 @@ import path from 'path';
 import { createLogger } from '../logging/Logger';
 import configService from '../config/ConfigService';
 import apiRoutes from '../routes/apiRoutes';
+import { createMemoryRoutes } from '../routes/memoryRoutes';
 import { corsMiddleware, requestLogger, errorHandler } from '../middleware';
 
 /**
@@ -12,8 +13,9 @@ export class HttpServer {
     private app: express.Application;
     private logger: ReturnType<typeof createLogger>;
     private server: any;
+    private healthCheckHandler?: () => any;
 
-    constructor(private port: number) {
+    constructor(private port: number, private memoryService?: any) {
         this.logger = createLogger(configService);
         this.app = express();
         this.setupMiddleware();
@@ -45,12 +47,17 @@ export class HttpServer {
         
         // API routes
         this.app.use('/api', apiRoutes);
+        
+        // Memory API routes (if memory service is available)
+        if (this.memoryService) {
+            this.app.use('/api/memory', createMemoryRoutes(this.memoryService));
+        }
     }
 
     private setupRoutes(): void {
         // Health check endpoint
         this.app.get('/health', (req: Request, res: Response) => {
-            const health = {
+            let health = {
                 status: 'ok',
                 timestamp: new Date().toISOString(),
                 uptime: process.uptime(),
@@ -59,9 +66,21 @@ export class HttpServer {
                 services: {
                     websocket: true,
                     ocr: true,
-                    translation: true
+                    translation: true,
+                    auth: !!this.memoryService,
+                    memory: !!this.memoryService
                 }
             };
+
+            // Use external health check handler if available
+            if (this.healthCheckHandler) {
+                try {
+                    const externalHealth = this.healthCheckHandler();
+                    health = { ...health, ...externalHealth };
+                } catch (error) {
+                    this.logger.warn('External health check failed', { error });
+                }
+            }
             
             res.json(health);
         });
@@ -325,17 +344,27 @@ export class HttpServer {
     }
 
     public start(): void {
-        this.server = this.app.listen(this.port, () => {
+        this.server = this.app.listen(this.port, '0.0.0.0', () => {
             this.logger.info(`HTTP Server started on port ${this.port}`);
             this.logger.info(`Health check: http://localhost:${this.port}/health`);
             this.logger.info(`WebSocket test: http://localhost:${this.port}/`);
         });
     }
 
-    public stop(): void {
-        if (this.server) {
-            this.server.close();
-            this.logger.info('HTTP Server stopped');
-        }
+    public stop(): Promise<void> {
+        return new Promise((resolve) => {
+            if (this.server) {
+                this.server.close(() => {
+                    this.logger.info('HTTP Server stopped');
+                    resolve();
+                });
+            } else {
+                resolve();
+            }
+        });
+    }
+
+    public addHealthCheckHandler(handler: () => any): void {
+        this.healthCheckHandler = handler;
     }
 }

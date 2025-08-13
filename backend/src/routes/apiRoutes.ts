@@ -102,7 +102,7 @@ router.get('/docs', (req, res) => {
             }
         },
         websocket: {
-            url: 'ws://localhost:8081',
+            url: 'ws://localhost:8080',
             description: 'WebSocket实时通信接口',
             messageTypes: [
                 'gaze - 眼动数据',

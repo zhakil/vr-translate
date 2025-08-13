@@ -1,0 +1,9 @@
+{
+    "deepl": {
+        "apiKey": "5fc8f2ca-9eaf-46cb-a7c2-ca3da8c35eae:fx",
+        "baseUrl": "https://api-free.deepl.com"
+    },
+    "translation": {
+        "engine": "deepl"
+    }
+}

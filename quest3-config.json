@@ -1,0 +1,46 @@
+{
+  "quest3": {
+    "ui": {
+      "interface": "quest3-vr-ui.html",
+      "mode": "vr-optimized",
+      "features": {
+        "gazeTracking": true,
+        "voiceInput": true,
+        "handTracking": true,
+        "screenshot": true,
+        "realTimeTranslation": true
+      },
+      "resolution": {
+        "width": 1832,
+        "height": 1920,
+        "refreshRate": 90
+      },
+      "optimization": {
+        "lowLatency": true,
+        "reducedMotion": false,
+        "highContrast": true,
+        "largeText": true
+      }
+    },
+    "network": {
+      "apiUrl": "http://localhost:3000/api",
+      "websocketUrl": "ws://localhost:8080",
+      "timeout": 5000,
+      "retryAttempts": 3
+    },
+    "translation": {
+      "defaultSourceLang": "auto",
+      "defaultTargetLang": "zh-CN",
+      "enableCache": true,
+      "enableHistory": true,
+      "maxHistoryItems": 100
+    },
+    "accessibility": {
+      "fontSize": "18px",
+      "buttonSize": "large",
+      "highContrastMode": true,
+      "voiceFeedback": true,
+      "hapticFeedback": true
+    }
+  }
+}

@@ -1,8 +1,10 @@
 {
     "server": {
-        "port": 8080,
-        "websocketPort": 8081,
-        "host": "localhost"
+        "port": 3000,
+        "websocketPort": 8080,
+        "host": "localhost",
+        "enableHealthCheck": true,
+        "shutdownTimeout": 30000
     },
     "logging": {
         "level": "info",
@@ -20,9 +22,13 @@
         "confidenceThreshold": 0.7
     },
     "translation": {
-        "engine": "mock",
+        "engine": "deepl",
         "timeout": 5000,
         "confidenceThreshold": 0.8
+    },
+    "deepl": {
+        "apiKey": "",
+        "baseUrl": "https://api-free.deepl.com"
     },
     "websocket": {
         "heartbeatInterval": 30000,
@@ -34,5 +40,15 @@
         "enabled": false,
         "ttl": 3600,
         "maxSize": 1000
+    },
+    "auth": {
+        "jwtSecret": "your-super-secret-jwt-key-change-this-in-production",
+        "jwtExpiry": "7d",
+        "bcryptRounds": 12
+    },
+    "memory": {
+        "cleanupInterval": "24h",
+        "maxItemsPerUser": 10000,
+        "retentionThreshold": 0.3
     }
 }

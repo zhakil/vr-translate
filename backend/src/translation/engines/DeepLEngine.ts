@@ -152,35 +152,94 @@ export class DeepLEngine implements ITranslationEngine {
             return isSource ? null : 'ZH';
         }
 
-        // 语言代码映射表
+        // 语言代码映射表 - 完整的DeepL支持语言
         const languageMap: { [key: string]: { source: string, target: string } } = {
-            'zh-CN': { source: 'ZH', target: 'ZH' },
+            // 中文变体
+            'zh-cn': { source: 'ZH', target: 'ZH' },
             'zh': { source: 'ZH', target: 'ZH' },
+            'zh-hans': { source: 'ZH', target: 'ZH-HANS' },
+            'zh-hant': { source: 'ZH', target: 'ZH-HANT' },
+            'chinese': { source: 'ZH', target: 'ZH' },
+            
+            // 英语变体
             'en': { source: 'EN', target: 'EN-US' },
+            'en-us': { source: 'EN', target: 'EN-US' },
+            'en-gb': { source: 'EN', target: 'EN-GB' },
+            'english': { source: 'EN', target: 'EN-US' },
+            
+            // 欧洲语言
             'de': { source: 'DE', target: 'DE' },
+            'german': { source: 'DE', target: 'DE' },
             'fr': { source: 'FR', target: 'FR' },
+            'french': { source: 'FR', target: 'FR' },
             'it': { source: 'IT', target: 'IT' },
-            'ja': { source: 'JA', target: 'JA' },
+            'italian': { source: 'IT', target: 'IT' },
             'es': { source: 'ES', target: 'ES' },
+            'spanish': { source: 'ES', target: 'ES' },
             'nl': { source: 'NL', target: 'NL' },
+            'dutch': { source: 'NL', target: 'NL' },
             'pl': { source: 'PL', target: 'PL' },
+            'polish': { source: 'PL', target: 'PL' },
+            
+            // 葡萄牙语变体
             'pt': { source: 'PT', target: 'PT-PT' },
-            'pt-BR': { source: 'PT', target: 'PT-BR' },
+            'pt-pt': { source: 'PT', target: 'PT-PT' },
+            'pt-br': { source: 'PT', target: 'PT-BR' },
+            'portuguese': { source: 'PT', target: 'PT-PT' },
+            
+            // 斯拉夫语言
             'ru': { source: 'RU', target: 'RU' },
-            'ko': { source: 'KO', target: 'KO' },
-            'sv': { source: 'SV', target: 'SV' },
-            'da': { source: 'DA', target: 'DA' },
-            'fi': { source: 'FI', target: 'FI' },
+            'russian': { source: 'RU', target: 'RU' },
             'cs': { source: 'CS', target: 'CS' },
-            'et': { source: 'ET', target: 'ET' },
-            'hu': { source: 'HU', target: 'HU' },
-            'lv': { source: 'LV', target: 'LV' },
-            'lt': { source: 'LT', target: 'LT' },
+            'czech': { source: 'CS', target: 'CS' },
             'sk': { source: 'SK', target: 'SK' },
+            'slovak': { source: 'SK', target: 'SK' },
             'sl': { source: 'SL', target: 'SL' },
+            'slovenian': { source: 'SL', target: 'SL' },
             'bg': { source: 'BG', target: 'BG' },
+            'bulgarian': { source: 'BG', target: 'BG' },
+            
+            // 北欧语言
+            'sv': { source: 'SV', target: 'SV' },
+            'swedish': { source: 'SV', target: 'SV' },
+            'da': { source: 'DA', target: 'DA' },
+            'danish': { source: 'DA', target: 'DA' },
+            'fi': { source: 'FI', target: 'FI' },
+            'finnish': { source: 'FI', target: 'FI' },
+            
+            // 波罗的海语言
+            'et': { source: 'ET', target: 'ET' },
+            'estonian': { source: 'ET', target: 'ET' },
+            'lv': { source: 'LV', target: 'LV' },
+            'latvian': { source: 'LV', target: 'LV' },
+            'lt': { source: 'LT', target: 'LT' },
+            'lithuanian': { source: 'LT', target: 'LT' },
+            
+            // 亚洲语言
+            'ja': { source: 'JA', target: 'JA' },
+            'japanese': { source: 'JA', target: 'JA' },
+            'ko': { source: 'KO', target: 'KO' },
+            'korean': { source: 'KO', target: 'KO' },
+            
+            // 其他欧洲语言
+            'hu': { source: 'HU', target: 'HU' },
+            'hungarian': { source: 'HU', target: 'HU' },
             'ro': { source: 'RO', target: 'RO' },
-            'el': { source: 'EL', target: 'EL' }
+            'romanian': { source: 'RO', target: 'RO' },
+            'el': { source: 'EL', target: 'EL' },
+            'greek': { source: 'EL', target: 'EL' },
+            
+            // 新增支持的语言
+            'ar': { source: 'AR', target: 'AR' },
+            'arabic': { source: 'AR', target: 'AR' },
+            'id': { source: 'ID', target: 'ID' },
+            'indonesian': { source: 'ID', target: 'ID' },
+            'nb': { source: 'NB', target: 'NB' },
+            'norwegian': { source: 'NB', target: 'NB' },
+            'tr': { source: 'TR', target: 'TR' },
+            'turkish': { source: 'TR', target: 'TR' },
+            'uk': { source: 'UK', target: 'UK' },
+            'ukrainian': { source: 'UK', target: 'UK' }
         };
 
         const mapping = languageMap[langCode.toLowerCase()];

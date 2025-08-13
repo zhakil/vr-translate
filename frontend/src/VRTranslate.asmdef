@@ -5,9 +5,12 @@
         "Unity.XR.Interaction.Toolkit",
         "Unity.XR.OpenXR",
         "Unity.XR.Management",
+        "Unity.XR.CoreUtils",
         "Unity.InputSystem",
         "Unity.TextMeshPro",
-        "Unity.Netcode.Runtime"
+        "Unity.Netcode.Runtime",
+        "Meta.XR.SDK.Core",
+        "Meta.XR.SDK.Interaction"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
