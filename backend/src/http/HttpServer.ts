@@ -128,6 +128,7 @@ export class HttpServer {
                     'GET /api/docs',
                     'POST /api/translate',
                     'POST /api/ocr',
+                    'POST /api/ocr/capture',
                     'POST /api/ocr-translate'
                 ]
             });

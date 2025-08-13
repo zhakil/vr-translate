@@ -9,17 +9,21 @@ services:
     container_name: vr-translate-backend
     restart: unless-stopped
     ports:
-      - "8080:8080"   # HTTP API port
-      - "8081:8081"   # WebSocket port
+      - "3000:3000"   # HTTP API port
+      - "3001:3001"   # WebSocket port
+    env_file:
+      - .env
     environment:
-      - NODE_ENV=production
-      - PORT=8080
-      - WEBSOCKET_PORT=8081
-      - LOG_LEVEL=info
-      # API Keys (override with .env file)
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-3000}
+      - WEBSOCKET_PORT=${WEBSOCKET_PORT:-3001}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # API Keys from .env file
+      - API_SERVER_URL=${API_SERVER_URL:-http://localhost:3001/api}
+      - DEEPL_API_KEY=${DEEPL_API_KEY}
+      - DEEPL_BASE_URL=${DEEPL_BASE_URL:-https://api-free.deepl.com}
       - GOOGLE_VISION_API_KEY=${GOOGLE_VISION_API_KEY:-}
       - GOOGLE_TRANSLATE_API_KEY=${GOOGLE_TRANSLATE_API_KEY:-}
-      - DEEPL_API_KEY=${DEEPL_API_KEY:-}
     volumes:
       # Mount logs directory for persistence
       - ./backend/logs:/app/logs

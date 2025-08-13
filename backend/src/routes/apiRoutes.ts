@@ -25,6 +25,11 @@ router.post('/ocr', validateRequest(['image']), (req, res) => {
     translationController.recognizeText(req, res);
 });
 
+// OCR截图捕获接口
+router.post('/ocr/capture', (req, res) => {
+    translationController.captureAndOCR(req, res);
+});
+
 // OCR + 翻译组合接口
 router.post('/ocr-translate', validateRequest(['image']), (req, res) => {
     translationController.ocrAndTranslate(req, res);
@@ -76,6 +81,15 @@ router.get('/docs', (req, res) => {
                 parameters: {
                     image: 'string (required) - Base64编码的图片数据',
                     lang: 'string (optional) - 识别语言，默认auto'
+                }
+            },
+            'POST /api/ocr/capture': {
+                description: 'OCR截图捕获（模拟）',
+                parameters: {
+                    x: 'number (optional) - X坐标，默认0',
+                    y: 'number (optional) - Y坐标，默认0',
+                    width: 'number (optional) - 宽度，默认200',
+                    height: 'number (optional) - 高度，默认100'
                 }
             },
             'POST /api/ocr-translate': {

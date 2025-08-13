@@ -55,6 +55,51 @@ export class TranslationController {
     }
 
     /**
+     * OCR截图捕获（模拟）
+     * POST /api/ocr/capture
+     */
+    async captureAndOCR(req: Request, res: Response): Promise<void> {
+        try {
+            const { x = 0, y = 0, width = 200, height = 100 } = req.body;
+
+            this.logger.info(`OCR截图捕获请求: (${x}, ${y}) 区域 ${width}x${height}`);
+
+            // 模拟截图和OCR功能
+            // 在真实环境中，这里应该调用屏幕截图和OCR服务
+            const mockTexts = [
+                'hello world',
+                'goodbye', 
+                'thank you',
+                'please',
+                'welcome',
+                'hello',
+                'help',
+                'menu',
+                'settings',
+                'quit'
+            ];
+
+            const randomText = mockTexts[Math.floor(Math.random() * mockTexts.length)];
+            this.logger.info(`模拟OCR结果: "${randomText}"`);
+
+            res.json({
+                success: true,
+                text: randomText,
+                coordinates: { x, y, width, height },
+                timestamp: new Date().toISOString()
+            });
+
+        } catch (error) {
+            this.logger.error('OCR截图捕获API错误:', error);
+            res.status(500).json({
+                success: false,
+                error: 'CAPTURE_OCR_FAILED',
+                message: 'OCR截图捕获服务暂时不可用'
+            });
+        }
+    }
+
+    /**
      * OCR识别图片中的文字
      * POST /api/ocr
      */

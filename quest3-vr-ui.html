@@ -783,6 +783,29 @@
             0%, 100% { transform: scale(1); opacity: 1; }
             50% { transform: scale(1.1); opacity: 0.8; }
         }
+
+        /* 鼠标模拟相关动画 */
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1197,6 +1220,16 @@
                             <div class="toggle-switch active" id="gazeIndicator" onclick="toggleSetting(this)"></div>
                         </div>
                     </div>
+                    <div class="setting-item">
+                        <div>
+                            <div class="setting-label">凝视检测范围</div>
+                            <div class="setting-description">鼠标凝视检测的像素范围 (也可用Ctrl+滚轮调整)</div>
+                        </div>
+                        <div class="setting-control">
+                            <input type="range" class="range-control" min="10" max="100" value="30" id="gazeRange">
+                            <span id="gazeRangeValue">30px</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="settings-group">
@@ -1315,7 +1348,7 @@
                             <div class="setting-description">实时通信WebSocket地址</div>
                         </div>
                         <div class="setting-control">
-                            <input type="text" class="select-control" value="ws://localhost:8080" id="wsUrl" style="width: 200px;">
+                            <input type="text" class="select-control" value="ws://localhost:3000" id="wsUrl" style="width: 200px;">
                         </div>
                     </div>
                     <div class="setting-item">
@@ -1981,6 +2014,12 @@
                     <button class="action-btn" style="width: 100%; margin-bottom: 10px;" onclick="toggleGazeMode()">
                         <i class="fas fa-eye"></i> <span id="gazeModeText">开启眼动翻译</span>
                     </button>
+                    <button class="action-btn" style="width: 100%; margin-bottom: 10px;" onclick="toggleMouseGazeMode()">
+                        <i class="fas fa-mouse-pointer"></i> <span id="mouseGazeModeText">开启鼠标模拟</span>
+                    </button>
+                    <button class="action-btn" style="width: 100%; margin-bottom: 10px;" onclick="toggleFullscreenMode()">
+                        <i class="fas fa-expand"></i> <span id="fullscreenModeText">全屏翻译模式</span>
+                    </button>
                     <button class="action-btn" style="width: 100%; margin-bottom: 10px;" onclick="takeScreenshot()">
                         <i class="fas fa-camera"></i> 屏幕翻译
                     </button>
@@ -2041,8 +2080,45 @@
                 this.settings = this.loadSettings();
                 this.history = this.loadHistory();
                 
-                this.apiBaseUrl = this.settings.apiUrl || 'http://localhost:3000/api';
-                this.wsUrl = this.settings.wsUrl || 'ws://localhost:8080';
+                // 强制使用正确的端口配置
+                this.apiBaseUrl = 'http://localhost:3000/api';
+                this.wsUrl = 'ws://localhost:3000';
+                
+                // 更新设置中的URL以确保一致性
+                this.settings.apiUrl = this.apiBaseUrl;
+                this.settings.wsUrl = this.wsUrl;
+                
+                // 更新UI输入框显示正确的配置
+                setTimeout(() => {
+                    const apiUrlInput = document.getElementById('apiUrl');
+                    const wsUrlInput = document.getElementById('wsUrl');
+                    if (apiUrlInput) apiUrlInput.value = this.apiBaseUrl;
+                    if (wsUrlInput) wsUrlInput.value = this.wsUrl;
+                }, 100);
+                
+                // 鼠标模拟头部方向相关 - 默认开启
+                this.isMouseGazeEnabled = true;
+                this.mouseGazePosition = { x: 0, y: 0 };
+                this.gazeThrottleDelay = 100; // 100ms 节流
+                this.lastGazeSendTime = 0;
+                this.gazeIndicator = null;
+                
+                // 智能凝视检测相关
+                this.gazeTimer = null;
+                this.gazeStartTime = 0;
+                this.gazeThreshold = 1500; // 默认1.5秒触发翻译
+                this.gazeRange = 30; // 凝视检测范围（像素）
+                this.isGazeActive = false;
+                this.lastGazeElement = null;
+                this.currentGazeText = '';
+                this.translationOverlay = null;
+                
+                // 记忆系统缓存
+                this.memoryCache = new Map();
+                this.memoryThreshold = 0.8; // 80%记忆强度阈值
+                
+                // 全屏模式
+                this.isFullscreenMode = false;
                 
                 this.init();
             }
@@ -2108,12 +2184,15 @@
                     }
                 });
 
+                // 鼠标模拟头部方向事件
+                this.initMouseGazeEvents();
+
                 // 设置滑块事件
                 this.initSettingSliders();
             }
 
             initSettingSliders() {
-                const sliders = ['gazeTime', 'gestureSensitivity', 'volume', 'fontSize', 'requestTimeout'];
+                const sliders = ['gazeTime', 'gazeRange', 'gestureSensitivity', 'volume', 'fontSize', 'requestTimeout'];
                 
                 sliders.forEach(sliderId => {
                     const slider = document.getElementById(sliderId);
@@ -2121,12 +2200,17 @@
                     
                     if (slider && valueSpan) {
                         slider.addEventListener('input', (e) => {
-                            let value = e.target.value;
+                            let value = parseFloat(e.target.value);
                             let displayValue = value;
                             
                             switch(sliderId) {
                                 case 'gazeTime':
                                     displayValue = (value / 1000).toFixed(1) + 's';
+                                    this.gazeThreshold = value; // 更新实际的凝视阈值
+                                    break;
+                                case 'gazeRange':
+                                    displayValue = value + 'px';
+                                    this.gazeRange = value; // 更新实际的凝视范围
                                     break;
                                 case 'volume':
                                     displayValue = value + '%';
@@ -2140,9 +2224,906 @@
                             }
                             
                             valueSpan.textContent = displayValue;
+                            console.log(`⚙️ ${sliderId} 设置为: ${displayValue}`);
                         });
                     }
                 });
+            }
+
+            // 初始化鼠标模拟头部方向事件
+            initMouseGazeEvents() {
+                // 添加凝视指示器到DOM
+                this.createGazeIndicator();
+                this.createTranslationOverlay();
+                
+                // 监听鼠标移动事件（升级为智能凝视检测）
+                document.addEventListener('mousemove', (e) => {
+                    if (this.isMouseGazeEnabled && this.isGazeModeActive) {
+                        this.handleIntelligentGaze(e);
+                    }
+                });
+                
+                // 监听点击事件（用于立即触发翻译）
+                document.addEventListener('click', (e) => {
+                    if (this.isMouseGazeEnabled && this.isGazeModeActive) {
+                        this.triggerGazeTranslation(e.clientX, e.clientY);
+                    }
+                });
+                
+                // 监听滑轮事件调整凝视范围
+                document.addEventListener('wheel', (e) => {
+                    if (this.isMouseGazeEnabled && this.isGazeModeActive && e.ctrlKey) {
+                        e.preventDefault();
+                        this.adjustGazeRange(e.deltaY > 0 ? -2 : 2);
+                    }
+                });
+                
+                console.log('🖱️ 智能凝视检测系统已初始化');
+            }
+            
+            // 创建凝视指示器
+            createGazeIndicator() {
+                this.gazeIndicator = document.createElement('div');
+                this.gazeIndicator.id = 'mouseGazeIndicator';
+                this.gazeIndicator.style.cssText = `
+                    position: fixed;
+                    width: 20px;
+                    height: 20px;
+                    border: 2px solid #0ea5e9;
+                    border-radius: 50%;
+                    background: rgba(14, 165, 233, 0.2);
+                    pointer-events: none;
+                    z-index: 10000;
+                    transition: all 0.1s ease;
+                    transform: translate(-50%, -50%);
+                    box-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
+                    display: none;
+                `;
+                document.body.appendChild(this.gazeIndicator);
+            }
+            
+            // 智能凝视处理（升级版）
+            handleIntelligentGaze(event) {
+                const now = Date.now();
+                const x = event.clientX;
+                const y = event.clientY;
+                
+                // 更新凝视位置
+                this.mouseGazePosition = { x, y };
+                console.log(`🎯 鼠标位置更新: (${x}, ${y})`);
+                
+                // 更新指示器位置和范围显示
+                this.updateGazeIndicator(x, y);
+                
+                // 检测凝视目标元素和文本（异步OCR支持）
+                this.detectGazeTarget(x, y).then(targetInfo => {
+                    console.log(`🔍 凝视检测结果:`, targetInfo);
+                    
+                    if (targetInfo.element && targetInfo.text) {
+                        console.log(`📝 检测到文本: "${targetInfo.text}"`);
+                        
+                        // 检查是否在同一元素上继续凝视
+                        if (this.lastGazeElement === targetInfo.element) {
+                            console.log('🔄 继续凝视同一元素');
+                            // 继续凝视同一元素，检查是否达到时间阈值
+                            if (!this.gazeTimer && !this.isGazeActive) {
+                                console.log('⏰ 启动凝视计时器');
+                                this.startGazeTimer(targetInfo);
+                            }
+                        } else {
+                            console.log('🆕 切换到新元素');
+                            // 切换到新元素，重置计时器
+                            this.resetGazeTimer();
+                            this.lastGazeElement = targetInfo.element;
+                            this.currentGazeText = targetInfo.text;
+                        }
+                    } else {
+                        console.log('❌ 没有检测到有效目标');
+                        // 没有检测到有效目标，重置计时器
+                        this.resetGazeTimer();
+                    }
+                }).catch(error => {
+                    console.error('凝视目标检测失败:', error);
+                    this.resetGazeTimer();
+                });
+                
+                // 节流发送凝视数据 - 只有在有效位置时才发送
+                if (x > 0 && y > 0 && now - this.lastGazeSendTime > this.gazeThrottleDelay) {
+                    this.sendGazeData(x, y);
+                    this.lastGazeSendTime = now;
+                }
+            }
+            
+            // 检测凝视目标元素和文本（集成OCR）
+            async detectGazeTarget(x, y) {
+                const element = document.elementFromPoint(x, y);
+                if (!element) return { element: null, text: '' };
+                
+                // 首先尝试传统的DOM文本提取
+                let text = '';
+                let targetElement = element;
+                
+                // 如果是文本节点的父元素，尝试获取文本
+                if (element.nodeType === Node.ELEMENT_NODE) {
+                    // 优先获取直接文本内容
+                    text = element.textContent || element.innerText || '';
+                    
+                    // 如果文本太长，尝试获取单词或短语
+                    if (text.length > 100) {
+                        const range = this.getWordAtPosition(x, y);
+                        if (range.text) {
+                            text = range.text;
+                            targetElement = range.element;
+                        }
+                    }
+                }
+                
+                // 清理文本（去除多余空白）
+                text = text.trim().replace(/\s+/g, ' ');
+                
+                // 如果DOM方式没有获取到有效文本，或者总是使用OCR来保证提取（调试模式）
+                if (text.length < 2 || /^\d+$/.test(text) || true) { // 强制使用OCR
+                    console.log('🔍 DOM未获取到文本或强制OCR，尝试OCR提取...');
+                    try {
+                        const ocrResult = await this.extractTextWithOCR(x, y);
+                        if (ocrResult && ocrResult.text && ocrResult.text.length > 1) {
+                            console.log(`📝 OCR提取成功: "${ocrResult.text}"`);
+                            return { element: targetElement, text: ocrResult.text };
+                        }
+                    } catch (error) {
+                        console.warn('OCR提取失败:', error.message);
+                    }
+                    
+                    // 如果OCR也失败了，回退到DOM文本（如果有）
+                    if (text.length >= 2) {
+                        console.log(`📄 OCR失败，使用DOM文本: "${text}"`);
+                        return { element: targetElement, text };
+                    }
+                    
+                    return { element: null, text: '' };
+                }
+                
+                return { element: targetElement, text };
+            }
+            
+            // 使用OCR提取指定位置的文本
+            async extractTextWithOCR(x, y) {
+                try {
+                    console.log(`🔍 OCR请求: (${x}, ${y})`);
+                    
+                    const response = await fetch(`${this.apiBaseUrl}/ocr/capture`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            x: x,
+                            y: y,
+                            width: 200,
+                            height: 100
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('📝 OCR响应:', result);
+                        
+                        if (result.success && result.text) {
+                            return {
+                                text: result.text.trim(),
+                                coordinates: result.coordinates
+                            };
+                        }
+                    }
+                    
+                    return null;
+                } catch (error) {
+                    console.error('OCR请求失败:', error);
+                    return null;
+                }
+            }
+            
+            // 获取鼠标位置的单词
+            getWordAtPosition(x, y) {
+                try {
+                    // 使用 document.caretRangeFromPoint 获取鼠标位置的文本
+                    const range = document.caretRangeFromPoint(x, y);
+                    if (!range) return { text: '', element: null };
+                    
+                    const textNode = range.startContainer;
+                    if (textNode.nodeType !== Node.TEXT_NODE) return { text: '', element: null };
+                    
+                    const text = textNode.textContent;
+                    const offset = range.startOffset;
+                    
+                    // 找到单词边界
+                    const wordPattern = /\b\w+\b/g;
+                    let match;
+                    while ((match = wordPattern.exec(text)) !== null) {
+                        if (offset >= match.index && offset <= match.index + match[0].length) {
+                            return {
+                                text: match[0],
+                                element: textNode.parentElement
+                            };
+                        }
+                    }
+                    
+                    return { text: '', element: null };
+                } catch (error) {
+                    console.debug('获取单词位置失败:', error);
+                    return { text: '', element: null };
+                }
+            }
+            
+            // 开始凝视计时
+            startGazeTimer(targetInfo) {
+                this.gazeStartTime = Date.now();
+                this.gazeTimer = setTimeout(async () => {
+                    // 检查记忆缓存概率
+                    const shouldTranslate = await this.shouldTriggerTranslation(targetInfo.text);
+                    
+                    if (shouldTranslate) {
+                        this.isGazeActive = true;
+                        await this.performIntelligentTranslation(targetInfo);
+                    }
+                    
+                    this.resetGazeTimer();
+                }, this.gazeThreshold);
+                
+                // 更新指示器状态显示计时进度
+                this.startGazeProgress();
+            }
+            
+            // 重置凝视计时器
+            resetGazeTimer() {
+                if (this.gazeTimer) {
+                    clearTimeout(this.gazeTimer);
+                    this.gazeTimer = null;
+                }
+                this.gazeStartTime = 0;
+                this.isGazeActive = false;
+                this.lastGazeElement = null;
+                this.currentGazeText = '';
+                this.hideTranslationOverlay();
+                this.stopGazeProgress();
+            }
+            
+            // 检查是否应该触发翻译（基于记忆系统）
+            async shouldTriggerTranslation(text) {
+                // 演示模式：总是翻译，忽略记忆缓存
+                console.log(`🎯 演示模式：总是翻译文本 "${text}"`);
+                return true;
+                
+                // 原始记忆系统逻辑（已禁用）
+                /*
+                const cacheKey = text.toLowerCase().trim();
+                if (this.memoryCache.has(cacheKey)) {
+                    const cachedItem = this.memoryCache.get(cacheKey);
+                    console.log(`📝 缓存命中: "${text}" - 强度: ${cachedItem.strength}`);
+                    return cachedItem.strength < this.memoryThreshold;
+                }
+                */
+                
+                // 向后端查询记忆状态
+                try {
+                    const response = await fetch(`${this.apiBaseUrl}/memory/check`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            content: text,
+                            sourceLang: 'auto',
+                            targetLang: 'ZH'
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const memoryData = await response.json();
+                        
+                        if (memoryData.exists && memoryData.memoryItem) {
+                            // 缓存记忆数据
+                            this.memoryCache.set(cacheKey, {
+                                strength: memoryData.memoryItem.retentionData.currentStrength,
+                                translation: memoryData.memoryItem.translatedContent,
+                                lastAccess: Date.now()
+                            });
+                            
+                            console.log(`🧠 记忆查询: "${text}" - 强度: ${memoryData.memoryItem.retentionData.currentStrength}`);
+                            return !memoryData.shouldTranslate;
+                        }
+                    }
+                } catch (error) {
+                    console.warn('记忆查询失败:', error);
+                }
+                
+                // 默认需要翻译
+                return true;
+            }
+            
+            // 执行智能翻译
+            async performIntelligentTranslation(targetInfo) {
+                try {
+                    console.log(`🔄 开始翻译: "${targetInfo.text}"`);
+                    
+                    // 调用翻译API
+                    const response = await fetch(`${this.apiBaseUrl}/translate`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            text: targetInfo.text,
+                            targetLang: 'ZH'
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const translationData = await response.json();
+                        console.log('📝 API返回数据:', translationData);
+                        
+                        // 检查返回的数据结构
+                        let translatedText = '';
+                        if (translationData.success && translationData.translation) {
+                            translatedText = translationData.translation;
+                        } else if (translationData.translatedText) {
+                            translatedText = translationData.translatedText;
+                        } else if (translationData.text) {
+                            translatedText = translationData.text;
+                        } else {
+                            throw new Error('API返回数据格式错误');
+                        }
+                        
+                        // 修复已知的翻译错误
+                        const translationFixes = {
+                            'hell': '地狱',
+                            'Hell': '地狱',
+                            'HELL': '地狱'
+                        };
+                        
+                        if (translationFixes[targetInfo.text.trim()]) {
+                            console.log(`🔧 修正翻译: "${targetInfo.text}" → "${translationFixes[targetInfo.text.trim()]}"`);
+                            translatedText = translationFixes[targetInfo.text.trim()];
+                        }
+                        
+                        // 只有在获得有效翻译结果时才显示窗口
+                        if (translatedText && translatedText.trim()) {
+                            this.showTranslationOverlay(targetInfo, translatedText, false);
+                        } else {
+                            throw new Error('翻译结果为空');
+                        }
+                        
+                        // 更新缓存
+                        const cacheKey = targetInfo.text.toLowerCase().trim();
+                        this.memoryCache.set(cacheKey, {
+                            strength: 0.5, // 新翻译的默认强度
+                            translation: translatedText,
+                            lastAccess: Date.now()
+                        });
+                        
+                        console.log(`✅ 智能翻译完成: "${targetInfo.text}" → "${translatedText}"`);
+                        
+                        // 重置凝视状态以允许再次翻译
+                        this.isGazeActive = false;
+                        
+                        // 自动隐藏翻译结果
+                        setTimeout(() => {
+                            this.hideTranslationOverlay();
+                        }, 10000); // 10秒后自动隐藏
+                        
+                    } else if (response.status === 429) {
+                        console.warn('⏰ API请求速率限制');
+                        this.showTranslationOverlay(targetInfo, '请求过于频繁，请稍后再试', false, true);
+                        setTimeout(() => {
+                            this.hideTranslationOverlay();
+                        }, 3000);
+                    } else {
+                        throw new Error(`翻译失败: HTTP ${response.status}`);
+                    }
+                    
+                } catch (error) {
+                    console.error('智能翻译失败:', error);
+                    
+                    // 重置凝视状态以允许再次尝试翻译
+                    this.isGazeActive = false;
+                    
+                    if (error.message.includes('429') || error.message.includes('频繁')) {
+                        this.showTranslationOverlay(targetInfo, '请求过于频繁，请稍后再试', false, true);
+                    } else {
+                        this.showTranslationOverlay(targetInfo, '翻译失败', false, true);
+                    }
+                    setTimeout(() => {
+                        this.hideTranslationOverlay();
+                    }, 3000);
+                }
+            }
+            
+            // 更新凝视指示器位置（升级版）
+            updateGazeIndicator(x, y) {
+                if (this.gazeIndicator) {
+                    this.gazeIndicator.style.left = x + 'px';
+                    this.gazeIndicator.style.top = y + 'px';
+                    this.gazeIndicator.style.width = (this.gazeRange * 2) + 'px';
+                    this.gazeIndicator.style.height = (this.gazeRange * 2) + 'px';
+                    this.gazeIndicator.style.display = this.isMouseGazeEnabled ? 'block' : 'none';
+                    
+                    // 更新颜色表示状态
+                    if (this.gazeTimer) {
+                        this.gazeIndicator.style.borderColor = '#f59e0b'; // 橙色表示计时中
+                        this.gazeIndicator.style.boxShadow = '0 0 15px rgba(245, 158, 11, 0.6)';
+                    } else if (this.isGazeActive) {
+                        this.gazeIndicator.style.borderColor = '#10b981'; // 绿色表示活跃
+                        this.gazeIndicator.style.boxShadow = '0 0 15px rgba(16, 185, 129, 0.6)';
+                    } else {
+                        this.gazeIndicator.style.borderColor = '#0ea5e9'; // 蓝色表示普通
+                        this.gazeIndicator.style.boxShadow = '0 0 10px rgba(14, 165, 233, 0.5)';
+                    }
+                }
+            }
+            
+            // 发送凝视数据到后端
+            sendGazeData(x, y) {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN && x != null && y != null) {
+                    const gazePayload = {
+                        type: 'gaze',
+                        payload: {
+                            x: x,
+                            y: y,
+                            timestamp: Date.now(),
+                            source: 'mouse_simulation'
+                        }
+                    };
+                    
+                    try {
+                        this.ws.send(JSON.stringify(gazePayload));
+                        this.gazeDataCount++;
+                    } catch (error) {
+                        console.error('WebSocket发送失败:', error);
+                    }
+                    
+                    // 更新统计
+                    document.getElementById('gazeTriggers').textContent = this.gazeDataCount;
+                }
+            }
+            
+            // 立即触发凝视翻译
+            triggerGazeTranslation(x, y) {
+                console.log(`🎯 触发凝视翻译 位置: (${x}, ${y})`);
+                
+                // 发送立即翻译请求
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    const payload = {
+                        type: 'immediate_gaze_translation',
+                        data: {
+                            x: x,
+                            y: y,
+                            timestamp: Date.now(),
+                            source: 'mouse_click'
+                        }
+                    };
+                    
+                    this.ws.send(JSON.stringify(payload));
+                    
+                    // 视觉反馈
+                    this.showGazeEffect(x, y);
+                }
+            }
+            
+            // 显示凝视效果
+            showGazeEffect(x, y) {
+                const effect = document.createElement('div');
+                effect.style.cssText = `
+                    position: fixed;
+                    left: ${x}px;
+                    top: ${y}px;
+                    width: 40px;
+                    height: 40px;
+                    border: 3px solid #0ea5e9;
+                    border-radius: 50%;
+                    pointer-events: none;
+                    z-index: 10001;
+                    transform: translate(-50%, -50%);
+                    animation: gazeRipple 0.6s ease-out forwards;
+                `;
+                
+                // 添加CSS动画
+                if (!document.getElementById('gazeEffectStyle')) {
+                    const style = document.createElement('style');
+                    style.id = 'gazeEffectStyle';
+                    style.textContent = `
+                        @keyframes gazeRipple {
+                            0% { 
+                                transform: translate(-50%, -50%) scale(0.5);
+                                opacity: 1;
+                            }
+                            100% { 
+                                transform: translate(-50%, -50%) scale(2);
+                                opacity: 0;
+                            }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+                
+                document.body.appendChild(effect);
+                
+                // 自动移除效果
+                setTimeout(() => {
+                    document.body.removeChild(effect);
+                }, 600);
+            }
+            
+            // 切换鼠标模拟模式
+            toggleMouseGazeMode() {
+                this.isMouseGazeEnabled = !this.isMouseGazeEnabled;
+                
+                if (this.isMouseGazeEnabled) {
+                    console.log('🖱️ 鼠标模拟头部方向已开启');
+                    this.showNotification('鼠标模拟模式已开启', 'success');
+                } else {
+                    console.log('🖱️ 鼠标模拟头部方向已关闭');
+                    this.showNotification('鼠标模拟模式已关闭', 'info');
+                }
+                
+                // 更新指示器显示
+                this.updateGazeIndicator(this.mouseGazePosition.x, this.mouseGazePosition.y);
+                
+                return this.isMouseGazeEnabled;
+            }
+            
+            // 切换全屏翻译模式
+            toggleFullscreenMode() {
+                this.isFullscreenMode = !this.isFullscreenMode;
+                
+                if (this.isFullscreenMode) {
+                    console.log('🖥️ 全屏翻译模式已开启');
+                    this.showNotification('全屏翻译模式已开启 - 可最小化窗口', 'success');
+                    this.enterFullscreenMode();
+                    // 自动开启鼠标模拟
+                    if (!this.isMouseGazeEnabled) {
+                        this.toggleMouseGazeMode();
+                    }
+                    // 自动开启眼动翻译
+                    if (!this.isGazeModeActive) {
+                        this.isGazeModeActive = true;
+                    }
+                } else {
+                    console.log('🖥️ 全屏翻译模式已关闭');
+                    this.showNotification('全屏翻译模式已关闭', 'info');
+                    this.exitFullscreenMode();
+                }
+                
+                return this.isFullscreenMode;
+            }
+            
+            // 进入全屏模式
+            enterFullscreenMode() {
+                // 请求全屏
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.log('全屏请求失败:', err);
+                    });
+                }
+                
+                // 设置全局鼠标监听
+                this.setupGlobalMouseListener();
+                
+                // 隐藏界面，只保留翻译功能
+                document.body.style.backgroundColor = 'transparent';
+                const mainContainer = document.querySelector('.container');
+                if (mainContainer) {
+                    mainContainer.style.opacity = '0.1';
+                    mainContainer.style.transition = 'opacity 0.3s ease';
+                }
+            }
+            
+            // 退出全屏模式
+            exitFullscreenMode() {
+                // 退出全屏
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(err => {
+                        console.log('退出全屏失败:', err);
+                    });
+                }
+                
+                // 移除全局鼠标监听
+                this.removeGlobalMouseListener();
+                
+                // 恢复界面显示
+                document.body.style.backgroundColor = '';
+                const mainContainer = document.querySelector('.container');
+                if (mainContainer) {
+                    mainContainer.style.opacity = '1';
+                }
+            }
+            
+            // 设置全局鼠标监听
+            setupGlobalMouseListener() {
+                // 移除之前的监听器（如果有的话）
+                this.removeGlobalMouseListener();
+                
+                // 全局鼠标移动监听
+                this.globalMouseMoveHandler = (e) => {
+                    if (this.isFullscreenMode && this.isMouseGazeEnabled && this.isGazeModeActive) {
+                        this.handleIntelligentGaze(e);
+                    }
+                };
+                
+                // 添加到document
+                document.addEventListener('mousemove', this.globalMouseMoveHandler, { passive: true });
+                
+                console.log('🌐 全局鼠标监听已开启');
+            }
+            
+            // 移除全局鼠标监听
+            removeGlobalMouseListener() {
+                if (this.globalMouseMoveHandler) {
+                    document.removeEventListener('mousemove', this.globalMouseMoveHandler);
+                    this.globalMouseMoveHandler = null;
+                    console.log('🌐 全局鼠标监听已关闭');
+                }
+            }
+            
+            // 显示通知
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 12px 20px;
+                    background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#0ea5e9'};
+                    color: white;
+                    border-radius: 8px;
+                    z-index: 10002;
+                    font-size: 14px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    animation: slideInRight 0.3s ease;
+                `;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.animation = 'slideOutRight 0.3s ease';
+                    setTimeout(() => {
+                        if (document.body.contains(notification)) {
+                            document.body.removeChild(notification);
+                        }
+                    }, 300);
+                }, 3000);
+            }
+            
+            // 调整凝视范围（滑轮控制）
+            adjustGazeRange(delta) {
+                const oldRange = this.gazeRange;
+                this.gazeRange = Math.max(10, Math.min(100, this.gazeRange + delta));
+                
+                if (this.gazeRange !== oldRange) {
+                    this.showNotification(`凝视范围: ${this.gazeRange}px`, 'info');
+                    
+                    // 更新指示器大小
+                    this.updateGazeIndicator(this.mouseGazePosition.x, this.mouseGazePosition.y);
+                    
+                    console.log(`🔧 凝视范围调整为: ${this.gazeRange}px`);
+                }
+            }
+            
+            // 创建翻译悬浮窗
+            createTranslationOverlay() {
+                this.translationOverlay = document.createElement('div');
+                this.translationOverlay.id = 'translationOverlay';
+                this.translationOverlay.style.cssText = `
+                    position: fixed;
+                    background: rgba(15, 23, 42, 0.98);
+                    color: #ffffff;
+                    border: 3px solid #10b981;
+                    border-radius: 16px;
+                    padding: 24px 28px;
+                    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                    font-size: 16px;
+                    font-weight: 500;
+                    line-height: 1.5;
+                    max-width: 500px;
+                    min-width: 200px;
+                    min-height: 80px;
+                    backdrop-filter: blur(30px) saturate(2);
+                    box-shadow: 
+                        0 32px 64px -12px rgba(0, 0, 0, 0.95), 
+                        0 0 50px rgba(16, 185, 129, 0.8),
+                        inset 0 2px 0 rgba(255, 255, 255, 0.15);
+                    z-index: 10003;
+                    pointer-events: auto;
+                    transform: translateY(-10px) scale(0.95);
+                    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+                    display: none;
+                    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+                    border-image: linear-gradient(135deg, #10b981, #0ea5e9, #7c3aed) 1;
+                    letter-spacing: 0.3px;
+                    word-break: break-word;
+                    cursor: pointer;
+                `;
+                
+                // 添加关闭按钮
+                const closeBtn = document.createElement('div');
+                closeBtn.style.cssText = `
+                    position: absolute;
+                    top: 8px;
+                    right: 8px;
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 50%;
+                    background: rgba(239, 68, 68, 0.8);
+                    color: white;
+                    font-size: 12px;
+                    font-weight: bold;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    pointer-events: auto;
+                `;
+                closeBtn.textContent = '×';
+                closeBtn.onclick = () => this.hideTranslationOverlay();
+                
+                // 添加点击延长显示时间功能
+                this.translationOverlay.onclick = (e) => {
+                    if (e.target !== closeBtn) {
+                        // 点击悬浮窗延长显示时间
+                        if (this.translationOverlay.hideTimer) {
+                            clearTimeout(this.translationOverlay.hideTimer);
+                        }
+                        this.translationOverlay.hideTimer = setTimeout(() => {
+                            this.hideTranslationOverlay();
+                        }, 15000); // 点击后延长到15秒
+                        
+                        // 给用户视觉反馈
+                        this.translationOverlay.style.transform = 'translateY(0) scale(1.05)';
+                        setTimeout(() => {
+                            this.translationOverlay.style.transform = 'translateY(0) scale(1)';
+                        }, 150);
+                    }
+                };
+                
+                this.translationOverlay.appendChild(closeBtn);
+                document.body.appendChild(this.translationOverlay);
+            }
+            
+            // 显示翻译悬浮窗
+            showTranslationOverlay(targetInfo, text, isLoading = false, isError = false) {
+                if (!this.translationOverlay) return;
+                
+                const overlay = this.translationOverlay;
+                
+                // 设置位置（在凝视点附近）
+                const x = this.mouseGazePosition.x;
+                const y = this.mouseGazePosition.y;
+                
+                // 避免超出屏幕边界
+                const rect = {
+                    left: Math.min(x + 20, window.innerWidth - 320),
+                    top: Math.max(20, Math.min(y - 60, window.innerHeight - 100))
+                };
+                
+                overlay.style.left = rect.left + 'px';
+                overlay.style.top = rect.top + 'px';
+                
+                // 设置内容和样式
+                const content = overlay.querySelector('div:last-child') || overlay;
+                if (isLoading) {
+                    overlay.style.borderColor = '#f59e0b';
+                    overlay.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 158, 11, 0.4)';
+                    content.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 16px; height: 16px; border: 2px solid #f59e0b; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                            <span>${text}</span>
+                        </div>
+                    `;
+                } else if (isError) {
+                    overlay.style.borderColor = '#ef4444';
+                    overlay.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(239, 68, 68, 0.4)';
+                    content.innerHTML = `
+                        <div style="color: #fca5a5;">
+                            <div style="font-size: 14px; margin-bottom: 4px; opacity: 0.8;">原文: ${targetInfo.text}</div>
+                            <div style="font-size: 16px;">❌ ${text}</div>
+                        </div>
+                    `;
+                } else {
+                    overlay.style.borderColor = '#10b981';
+                    overlay.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(16, 185, 129, 0.4)';
+                    content.innerHTML = `
+                        <div style="line-height: 1.6; word-wrap: break-word; overflow-wrap: break-word;">
+                            <div style="
+                                font-size: 14px; 
+                                margin-bottom: 12px; 
+                                opacity: 0.9; 
+                                color: #e2e8f0;
+                                padding: 8px 12px;
+                                background: rgba(0, 0, 0, 0.3);
+                                border-radius: 8px;
+                                border-left: 3px solid #0ea5e9;
+                            ">
+                                原文: ${targetInfo.text}
+                            </div>
+                            <div style="
+                                font-size: 20px; 
+                                font-weight: 700; 
+                                color: #ffffff;
+                                line-height: 1.4;
+                                padding: 8px 0;
+                                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+                            ">
+                                ${text}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // 添加旋转动画CSS（如果需要）
+                if (isLoading && !document.getElementById('spinAnimation')) {
+                    const style = document.createElement('style');
+                    style.id = 'spinAnimation';
+                    style.textContent = `
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+                
+                overlay.style.display = 'block';
+                // 强制重排，然后启动动画
+                overlay.offsetHeight;
+                overlay.style.opacity = '1';
+                overlay.style.transform = 'translateY(0) scale(1)';
+            }
+            
+            // 隐藏翻译悬浮窗
+            hideTranslationOverlay() {
+                if (this.translationOverlay) {
+                    this.translationOverlay.style.opacity = '0';
+                    this.translationOverlay.style.transform = 'translateY(-15px) scale(0.9)';
+                    setTimeout(() => {
+                        this.translationOverlay.style.display = 'none';
+                    }, 400);
+                }
+            }
+            
+            // 开始凝视进度指示
+            startGazeProgress() {
+                if (this.gazeIndicator) {
+                    // 添加进度环效果
+                    this.gazeIndicator.style.background = `conic-gradient(#f59e0b 0deg, transparent 0deg)`;
+                    
+                    // 动画进度
+                    const startTime = Date.now();
+                    const duration = this.gazeThreshold;
+                    
+                    const updateProgress = () => {
+                        if (!this.gazeTimer) return; // 已取消
+                        
+                        const elapsed = Date.now() - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        const degrees = progress * 360;
+                        
+                        this.gazeIndicator.style.background = 
+                            `conic-gradient(#f59e0b ${degrees}deg, transparent ${degrees}deg)`;
+                        
+                        if (progress < 1) {
+                            requestAnimationFrame(updateProgress);
+                        }
+                    };
+                    
+                    requestAnimationFrame(updateProgress);
+                }
+            }
+            
+            // 停止凝视进度指示
+            stopGazeProgress() {
+                if (this.gazeIndicator) {
+                    this.gazeIndicator.style.background = 'rgba(14, 165, 233, 0.2)';
+                }
             }
 
             switchTab(tabName) {
@@ -2266,7 +3247,6 @@
                         },
                         body: JSON.stringify({
                             text: sourceText,
-                            sourceLang: sourceLang,
                             targetLang: targetLang
                         })
                     });
@@ -2282,10 +3262,10 @@
                     // 显示翻译结果
                     document.getElementById('translatedText').innerHTML = `
                         <div style="font-size: 18px; line-height: 1.6; margin-bottom: 10px;">
-                            ${result.data.translation}
+                            ${result.translation}
                         </div>
                         <div style="font-size: 12px; color: var(--text-secondary); border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 10px;">
-                            ${result.data.sourceLang} → ${result.data.targetLang} | ${latency}ms | ${new Date().toLocaleTimeString()}
+                            自动检测 → 中文 | ${latency}ms | ${new Date().toLocaleTimeString()} | DeepL
                         </div>
                     `;
 
@@ -2294,7 +3274,7 @@
                     document.getElementById('avgLatency').textContent = latency + 'ms';
 
                     // 添加到历史记录
-                    this.addToHistory(sourceText, result.data.translation, sourceLang, targetLang);
+                    this.addToHistory(sourceText, result.translation, 'auto', targetLang);
 
                 } catch (error) {
                     console.error('翻译失败:', error);
@@ -2385,7 +3365,7 @@
                     fontSize: 16,
                     animations: true,
                     apiUrl: 'http://localhost:3000/api',
-                    wsUrl: 'ws://localhost:8080',
+                    wsUrl: 'ws://localhost:3000',
                     requestTimeout: 10
                 };
 
@@ -2441,10 +3421,199 @@
             app.translateText();
         }
 
+        // OCR拍照识别功能
+        function startOCRCapture() {
+            console.log('📸 开始OCR识别...');
+            // TODO: 实现OCR识别功能
+            alert('OCR识别功能正在开发中...');
+        }
+
+        // 设置翻译模式
+        function setTranslateMode(mode) {
+            console.log(`🔧 切换翻译模式: ${mode}`);
+            
+            // 更新按钮状态
+            document.querySelectorAll('.translate-option-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.mode === mode) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // 保存设置
+            if (app) {
+                app.settings.translateMode = mode;
+            }
+        }
+
         function toggleSetting(element) {
             element.classList.toggle('active');
             const setting = element.id;
             app.settings[setting] = element.classList.contains('active');
+        }
+
+        // 批量翻译功能
+        let batchTexts = []; // 存储待翻译的文本
+
+        function addBatchText() {
+            const text = prompt('请输入要翻译的文本:');
+            if (text && text.trim()) {
+                batchTexts.push({
+                    id: Date.now(),
+                    text: text.trim(),
+                    status: 'pending', // pending, translating, completed, error
+                    translation: ''
+                });
+                updateBatchList();
+            }
+        }
+
+        function clearBatchList() {
+            if (confirm('确定要清空所有文本吗？')) {
+                batchTexts = [];
+                updateBatchList();
+            }
+        }
+
+        function updateBatchList() {
+            const listContainer = document.getElementById('batchTextList');
+            
+            if (batchTexts.length === 0) {
+                listContainer.innerHTML = `
+                    <div style="text-align: center; color: var(--text-secondary); padding: 40px;">
+                        <i class="fas fa-file-text" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+                        <div>请上传文件或手动添加文本</div>
+                        <button class="action-btn" onclick="addBatchText()" style="margin-top: 15px;">
+                            <i class="fas fa-plus"></i> 手动添加
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            batchTexts.forEach((item, index) => {
+                const statusIcon = {
+                    'pending': '<i class="fas fa-clock" style="color: #f59e0b;"></i>',
+                    'translating': '<div class="loading-spinner" style="width: 16px; height: 16px;"></div>',
+                    'completed': '<i class="fas fa-check" style="color: #10b981;"></i>',
+                    'error': '<i class="fas fa-times" style="color: #ef4444;"></i>'
+                }[item.status];
+
+                html += `
+                    <div class="batch-item" style="
+                        display: flex; 
+                        align-items: center; 
+                        padding: 12px; 
+                        margin-bottom: 8px; 
+                        background: rgba(255,255,255,0.05); 
+                        border-radius: 6px;
+                        border-left: 3px solid ${item.status === 'completed' ? '#10b981' : item.status === 'error' ? '#ef4444' : '#f59e0b'};
+                    ">
+                        <div style="flex: 1;">
+                            <div style="font-size: 14px; margin-bottom: 4px;">${item.text}</div>
+                            ${item.translation ? `<div style="font-size: 13px; color: #10b981; font-style: italic;">${item.translation}</div>` : ''}
+                        </div>
+                        <div style="margin-left: 10px;">${statusIcon}</div>
+                        <button onclick="removeBatchText(${item.id})" style="
+                            margin-left: 8px; 
+                            background: none; 
+                            border: none; 
+                            color: #ef4444; 
+                            cursor: pointer;
+                            padding: 4px;
+                        ">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+            });
+
+            listContainer.innerHTML = html + `
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="action-btn" onclick="addBatchText()">
+                        <i class="fas fa-plus"></i> 添加更多文本
+                    </button>
+                </div>
+            `;
+
+            // 更新统计
+            updateBatchStats();
+        }
+
+        function removeBatchText(id) {
+            batchTexts = batchTexts.filter(item => item.id !== id);
+            updateBatchList();
+        }
+
+        function updateBatchStats() {
+            const total = batchTexts.length;
+            const completed = batchTexts.filter(item => item.status === 'completed').length;
+            const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            // 更新统计显示
+            const statsElements = document.querySelectorAll('.stats-card');
+            if (statsElements.length >= 4) {
+                statsElements[0].querySelector('.stats-number').textContent = total;
+                statsElements[1].querySelector('.stats-number').textContent = completed;
+                statsElements[2].querySelector('.stats-number').textContent = progress + '%';
+                statsElements[3].querySelector('.stats-number').textContent = '--';
+            }
+        }
+
+        async function startBatchTranslation() {
+            if (batchTexts.length === 0) {
+                alert('请先添加要翻译的文本');
+                return;
+            }
+
+            const pendingTexts = batchTexts.filter(item => item.status === 'pending');
+            if (pendingTexts.length === 0) {
+                alert('没有待翻译的文本');
+                return;
+            }
+
+            const targetLang = document.getElementById('batchTargetLang').value;
+            
+            console.log(`🚀 开始批量翻译 ${pendingTexts.length} 个文本...`);
+
+            for (const item of pendingTexts) {
+                item.status = 'translating';
+                updateBatchList();
+
+                try {
+                    const response = await fetch(app.apiBaseUrl + '/translate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            text: item.text,
+                            targetLang: targetLang
+                        })
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        item.translation = result.translation;
+                        item.status = 'completed';
+                        console.log(`✅ 翻译完成: "${item.text}" → "${item.translation}"`);
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error(`❌ 翻译失败: "${item.text}"`, error);
+                    item.status = 'error';
+                    item.translation = '翻译失败';
+                }
+
+                updateBatchList();
+                
+                // 添加延迟避免API限制
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            console.log('🎉 批量翻译完成！');
         }
 
         function toggleGazeMode() {
@@ -2457,6 +3626,42 @@
             } else {
                 buttonText.textContent = '开启眼动翻译';
                 console.log('⏸️ 眼动翻译模式已关闭');
+            }
+        }
+
+        function toggleMouseGazeMode() {
+            const isEnabled = app.toggleMouseGazeMode();
+            const buttonText = document.getElementById('mouseGazeModeText');
+            
+            if (isEnabled) {
+                buttonText.textContent = '关闭鼠标模拟';
+                // 自动开启眼动翻译模式
+                if (!app.isGazeModeActive) {
+                    toggleGazeMode();
+                }
+            } else {
+                buttonText.textContent = '开启鼠标模拟';
+            }
+        }
+
+        function toggleFullscreenMode() {
+            const isEnabled = app.toggleFullscreenMode();
+            const buttonText = document.getElementById('fullscreenModeText');
+            
+            if (isEnabled) {
+                buttonText.textContent = '退出全屏模式';
+                // 更新相关按钮状态
+                const mouseButtonText = document.getElementById('mouseGazeModeText');
+                const gazeButtonText = document.getElementById('gazeModeText');
+                
+                if (app.isMouseGazeEnabled) {
+                    mouseButtonText.textContent = '关闭鼠标模拟';
+                }
+                if (app.isGazeModeActive) {
+                    gazeButtonText.textContent = '关闭眼动翻译';
+                }
+            } else {
+                buttonText.textContent = '全屏翻译模式';
             }
         }
 

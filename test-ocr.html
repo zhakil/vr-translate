@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR翻译测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .test-text {
+            font-size: 24px;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .test-text:hover {
+            background-color: #e0e0e0;
+        }
+        #status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="status">鼠标停留在文本上测试OCR翻译</div>
+    
+    <h1>OCR翻译测试</h1>
+    
+    <div class="test-text">Hello World</div>
+    <div class="test-text">Good morning</div>
+    <div class="test-text">Thank you</div>
+    <div class="test-text">Please help me</div>
+    <div class="test-text">I need assistance</div>
+    <div class="test-text">How are you?</div>
+    <div class="test-text">Nice to meet you</div>
+    <div class="test-text">Goodbye</div>
+    
+    <script>
+        console.log('🧪 OCR翻译测试页面已加载');
+        
+        // 测试OCR API连接
+        async function testOCR() {
+            try {
+                const response = await fetch('http://localhost:3000/api/health');
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('✅ 后端服务连接正常:', data);
+                    document.getElementById('status').textContent = '后端服务正常，可以测试OCR翻译';
+                } else {
+                    console.log('❌ 后端服务连接失败');
+                    document.getElementById('status').textContent = '后端服务连接失败';
+                }
+            } catch (error) {
+                console.error('❌ 无法连接后端服务:', error);
+                document.getElementById('status').textContent = '无法连接后端服务，请启动服务器';
+            }
+        }
+        
+        // 页面加载时测试连接
+        testOCR();
+        
+        // 添加鼠标事件监听
+        document.addEventListener('mousemove', (e) => {
+            const element = document.elementFromPoint(e.clientX, e.clientY);
+            if (element && element.classList.contains('test-text')) {
+                // 这里会触发VR UI中的OCR翻译逻辑
+                console.log(`鼠标在文本上: "${element.textContent}" at (${e.clientX}, ${e.clientY})`);
+            }
+        });
+    </script>
+</body>
+</html>
