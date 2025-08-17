@@ -3,10 +3,6 @@ using UnityEngine.XR;
 using System.Collections.Generic;
 using VRTranslate.Network;
 
-#if OCULUS_SDK
-using Oculus.Interaction;
-#endif
-
 /**
  * Specialized head gaze manager optimized for Quest 3.
  * Uses Meta XR SDK features specific to Quest 3 for improved head tracking accuracy.

@@ -8,9 +8,10 @@
         "Unity.XR.CoreUtils",
         "Unity.InputSystem",
         "Unity.TextMeshPro",
-        "Unity.Netcode.Runtime",
         "Meta.XR.SDK.Core",
-        "Meta.XR.SDK.Interaction"
+        "Meta.XR.SDK.Interaction",
+        "Meta.XR.SDK.Platform",
+        "Meta.XR.SDK.Voice"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

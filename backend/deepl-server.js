@@ -7,15 +7,29 @@ const path = require('path');
 
 // 检查OCR依赖是否存在
 let hasOCR = false;
+let hasSharp = false;
 let Tesseract, sharp;
 
 try {
     Tesseract = require('tesseract.js');
-    sharp = require('sharp');
+    console.log('✅ Tesseract.js 已加载');
     hasOCR = true;
-    console.log('✅ OCR库已加载');
 } catch (error) {
-    console.log('⚠️ OCR库未安装，使用简单文本提取');
+    console.log('⚠️ Tesseract.js 未安装');
+}
+
+try {
+    sharp = require('sharp');
+    console.log('✅ Sharp 已加载');
+    hasSharp = true;
+} catch (error) {
+    console.log('⚠️ Sharp 未安装，将使用基础图像处理');
+}
+
+if (hasOCR) {
+    console.log('✅ OCR功能可用' + (hasSharp ? '（完整功能）' : '（基础功能）'));
+} else {
+    console.log('⚠️ OCR功能不可用，使用简单文本提取');
 }
 
 console.log('🚀 启动支持DeepL的VR翻译服务器...');
