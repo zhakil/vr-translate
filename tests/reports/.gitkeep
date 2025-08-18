@@ -1,0 +1,18 @@
+# 测试报告目录
+
+此目录用于存储自动化测试生成的报告文件。
+
+## 报告类型
+
+- **JSON报告**: 机器可读的测试结果数据
+- **HTML报告**: 可视化的测试结果页面
+- **性能报告**: 响应时间和吞吐量数据
+- **错误日志**: 失败测试的详细错误信息
+
+## 文件命名规则
+
+- `automated_test_YYYYMMDD-HHMMSS.json` - 自动化测试JSON报告
+- `automated_test_YYYYMMDD-HHMMSS.html` - 自动化测试HTML报告
+- `api_test_YYYYMMDD_HHMMSS.txt` - API测试结果
+- `performance_test_YYYYMMDD_HHMMSS.txt` - 性能测试结果
+- `test_summary_YYYYMMDD_HHMMSS.md` - 综合测试总结

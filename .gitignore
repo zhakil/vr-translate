@@ -1,45 +1,34 @@
-# Visual Studio
-.vs/
-*.suo
-*.user
-*.sln.docstates
-
-# Unity
-/[Ll]ibrary/
-/[Tt]emp/
-/[Oo]bj/
-/[Bb]uild/
-/[Bb]uilds/
-/[Ll]ogs/
-/[Uu]ser[Ss]ettings/
-
-# MemoryCaptures can be huge
-/[Mm]emoryCaptures/
-
-# Various generated files
-/Assets/Plugins/Editor/JetBrains*
-.gradle/
-/ExportedObj/
-.consulo/
-*.csproj
-*.unityproj
-*.sln
-*.suo
-*.tmp
-*.user
-*.userprefs
-*.pidb
-*.booproj
-*.svd
-*.pdb
-*.mdb
-*.opendb
-*.VC.db
-
-# Node
+# VR翻译系统 .gitignore 文件
+# Node.js
 node_modules/
-dist/
-.env
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.env
+.env.local
+.env.production
+
+# Unity
+frontend/unity/Library/
+frontend/unity/Temp/
+frontend/unity/obj/
+frontend/unity/Build/
+frontend/unity/Logs/
+frontend/unity/UserSettings/
+
+# API Keys (Security)
+config/local.json
+*.key
+*.pem
+
+# Test reports
+tests/reports/*.json
+tests/reports/*.html
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE  
+.vscode/
+.idea/

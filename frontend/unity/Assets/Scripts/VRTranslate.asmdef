@@ -1,0 +1,25 @@
+{
+    "name": "VRTranslate",
+    "rootNamespace": "VRTranslate",
+    "references": [
+        "Unity.XR.Interaction.Toolkit",
+        "Unity.XR.OpenXR",
+        "Unity.XR.Management",
+        "Unity.XR.CoreUtils",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "Meta.XR.SDK.Core",
+        "Meta.XR.SDK.Interaction",
+        "Meta.XR.SDK.Platform",
+        "Meta.XR.SDK.Voice"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
