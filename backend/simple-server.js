@@ -5,8 +5,8 @@ const url = require('url');
 console.log('🚀 启动VR翻译服务器...');
 
 // 配置
-const HTTP_PORT = 3000;
-const WS_PORT = 8080;
+const HTTP_PORT = process.env.PORT || 3000;
+const WS_PORT = process.env.WS_PORT || 8080;
 
 // HTTP服务器
 const httpServer = http.createServer((req, res) => {
@@ -28,7 +28,7 @@ const httpServer = http.createServer((req, res) => {
     console.log(`${req.method} ${path}`);
     
     try {
-        if (path === '/api/health' || path === '/') {
+        if (path === '/api/health' || path === '/health' || path === '/') {
             res.writeHead(200);
             res.end(JSON.stringify({
                 status: 'healthy',
@@ -47,6 +47,65 @@ const httpServer = http.createServer((req, res) => {
                     total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
                 }
             }));
+            
+        } else if (path === '/api/gaze' && req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', () => {
+                try {
+                    const gazeData = JSON.parse(body);
+                    // 模拟处理注视数据
+                    res.writeHead(200);
+                    res.end(JSON.stringify({
+                        success: true,
+                        message: 'Gaze data received',
+                        timestamp: new Date().toISOString()
+                    }));
+                } catch (e) {
+                    res.writeHead(400);
+                    res.end(JSON.stringify({ error: 'Invalid gaze data' }));
+                }
+            });
+            
+        } else if (path === '/api/screenshot' && req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', () => {
+                try {
+                    const screenshotData = JSON.parse(body);
+                    console.log('📸 收到截图数据，模拟OCR和翻译...');
+                    // 模拟翻译结果
+                    res.writeHead(200);
+                    res.end(JSON.stringify({
+                        original: 'Hello World',
+                        translation: '你好世界',
+                        confidence: 0.95,
+                        timestamp: new Date().toISOString()
+                    }));
+                } catch (e) {
+                    res.writeHead(400);
+                    res.end(JSON.stringify({ error: 'Invalid screenshot data' }));
+                }
+            });
+            
+        } else if (path === '/api/config' && req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', () => {
+                try {
+                    const configData = JSON.parse(body);
+                    console.log('⚙️ 收到配置更新:', configData);
+                    res.writeHead(200);
+                    res.end(JSON.stringify({
+                        success: true,
+                        message: 'Config updated',
+                        timestamp: new Date().toISOString()
+                    }));
+                } catch (e) {
+                    res.writeHead(400);
+                    res.end(JSON.stringify({ error: 'Invalid config data' }));
+                }
+            });
             
         } else if (path === '/api/translate' && req.method === 'POST') {
             let body = '';
